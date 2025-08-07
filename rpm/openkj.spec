@@ -13,8 +13,8 @@ License:        GPL
 URL:            https://openkj.org
 Source0:	https://github.com/OpenKJ/OpenKJ/releases/download/v2.0.5-release/openkj-2.0.5-release.tar.gz
 
-BuildRequires:  cmake qt5-qtbase-devel qt5-qtsvg-devel qt5-qtmultimedia-devel gstreamer1-devel gstreamer1-plugins-base-devel taglib-devel taglib-extras-devel
-Requires:       qt5-qtbase qt5-qtsvg qt5-qtmultimedia gstreamer1 gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-ugly-free unzip gstreamer1-libav taglib taglib-extras google-roboto-fonts google-roboto-mono-fonts
+BuildRequires:  cmake qt6-qtbase-devel qt6-qtsvg-devel qt6-qtmultimedia-devel gstreamer1-devel gstreamer1-plugins-base-devel taglib-devel taglib-extras-devel
+Requires:       qt6-qtbase qt6-qtsvg qt6-qtmultimedia gstreamer1 gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-ugly-free unzip gstreamer1-libav taglib taglib-extras google-roboto-fonts google-roboto-mono-fonts
 
 %description
 Karaoke hosting software targeted at professional KJ's.  Includes rotation management, break music player,

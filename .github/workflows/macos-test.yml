@@ -25,11 +25,12 @@ jobs:
       uses: actions/cache@v1
       with:
        path: ../Qt
-       key: ${{ runner.os }}-QtCache
+       key: ${{ runner.os }}-QtCache-6.5.2
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       with:
+         version: '6.5.2'
        cached: ${{ steps.cache-qt.outputs.cache-hit }}
 
     - name: Cache GStreamer
