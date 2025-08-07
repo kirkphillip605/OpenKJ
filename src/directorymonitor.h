@@ -8,29 +8,31 @@
 #include <QStringList>
 #include <QTimer>
 
-class DirectoryMonitor : public QObject
-{
-    Q_OBJECT
+class DbUpdateWorker;
+
+class DirectoryMonitor : public QObject {
+  Q_OBJECT
 
 public:
-    explicit DirectoryMonitor(QObject *parent, QStringList pathsToWatch);
-    ~DirectoryMonitor() override;
+  explicit DirectoryMonitor(QObject *parent, QStringList pathsToWatch);
+  ~DirectoryMonitor() override;
 
 private:
-    QFutureWatcher<QStringList> m_pathsEnumeratedWatcher;
-    QFileSystemWatcher m_fsWatcher;
+  QFutureWatcher<QStringList> m_pathsEnumeratedWatcher;
+  QFileSystemWatcher m_fsWatcher;
 
-    QSet<QString> m_pathsWithChangedFiles;
-    QTimer m_scanTimer;
+  QSet<QString> m_pathsWithChangedFiles;
+  QTimer m_scanTimer;
 
-    QStringList enumeratePathsAsync(QStringList paths);
-    void directoriesEnumerated();
-    void directoryChanged(const QString& dirPath);
-    void scanPaths();
+  DbUpdateWorker *m_worker{nullptr};
+
+  QStringList enumeratePathsAsync(QStringList paths);
+  void directoriesEnumerated();
+  void directoryChanged(const QString &dirPath);
+  void scanPaths();
 
 signals:
-    void databaseUpdateComplete();
-
+  void databaseUpdateComplete();
 };
 
 #endif // DIRECTORYMONITOR_H
