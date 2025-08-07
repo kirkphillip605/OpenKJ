@@ -23,6 +23,7 @@
 #include <QDesktopServices>
 #include <QMenu>
 #include <QMessageBox>
+#include <QIcon>
 #include "okjsongbookapi.h"
 #include <QProgressDialog>
 #include "src/models/tableviewtooltipfilter.h"
@@ -160,11 +161,10 @@ void DlgRequests::rotationChanged() {
 }
 
 void DlgRequests::updateIcons() {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
-    ui->buttonRefresh->setIcon(QIcon(thm + "actions/22/view-refresh.svg"));
-    ui->pushButtonClearReqs->setIcon(QIcon(thm + "actions/22/edit-clear-all.svg"));
-    ui->pushButtonSearch->setIcon(QIcon(thm + "actions/22/edit-find.svg"));
-    ui->pushButtonWebSearch->setIcon(QIcon(thm + "apps/48/internet-web-browser.svg"));
+    ui->buttonRefresh->setIcon(QIcon::fromTheme("view-refresh"));
+    ui->pushButtonClearReqs->setIcon(QIcon::fromTheme("edit-clear-all"));
+    ui->pushButtonSearch->setIcon(QIcon::fromTheme("edit-find"));
+    ui->pushButtonWebSearch->setIcon(QIcon::fromTheme("internet-web-browser"));
 }
 
 void DlgRequests::on_pushButtonClose_clicked() {

@@ -1115,8 +1115,7 @@ QPushButton:default {
                             <string/>
                            </property>
                            <property name="icon">
-                            <iconset resource="resources.qrc">
-                             <normaloff>:/theme/Icons/okjbreeze-dark/actions/22/media-playlist-append.svg</normaloff>:/theme/Icons/okjbreeze-dark/actions/22/media-playlist-append.svg</iconset>
+                            <iconset theme="media-playlist-append"/>
                            </property>
                            <property name="iconSize">
                             <size>
@@ -1135,8 +1134,7 @@ QPushButton:default {
                             <string/>
                            </property>
                            <property name="icon">
-                            <iconset resource="resources.qrc">
-                             <normaloff>:/theme/Icons/okjbreeze-dark/actions/22/media-playback-start.svg</normaloff>:/theme/Icons/okjbreeze-dark/actions/22/media-playback-start.svg</iconset>
+                            <iconset theme="media-playback-start"/>
                            </property>
                            <property name="iconSize">
                             <size>
@@ -1594,9 +1592,7 @@ QPushButton:default {
                      <property name="text">
                       <string/>
                      </property>
-                     <property name="pixmap">
-                      <pixmap resource="resources.qrc">:/theme/Icons/okjbreeze/actions/16/player-volume.svg</pixmap>
-                     </property>
+                     <!-- pixmap set at runtime using QIcon::fromTheme -->
                      <property name="scaledContents">
                       <bool>true</bool>
                      </property>
@@ -2781,9 +2777,7 @@ QPushButton:default {
                           <property name="text">
                            <string/>
                           </property>
-                          <property name="pixmap">
-                           <pixmap resource="resources.qrc">:/theme/Icons/okjbreeze-dark/actions/16/player-volume.svg</pixmap>
-                          </property>
+                          <!-- pixmap set at runtime using QIcon::fromTheme -->
                          </widget>
                         </item>
                        </layout>

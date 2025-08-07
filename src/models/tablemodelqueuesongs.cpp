@@ -7,7 +7,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QUrl>
-#include <QSvgRenderer>
+#include <QIcon>
+#include <QPainter>
 #include <spdlog/fmt/ostr.h>
 
 std::ostream & operator<<(std::ostream& os, const QString& s);
@@ -565,13 +566,8 @@ QSize TableModelQueueSongs::getColumnSizeHint(int section) const {
 }
 
 void ItemDelegateQueueSongs::resizeIconsForFont(const QFont &font) {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
     m_curFontHeight = QFontMetrics(font).height();
-    m_iconDelete = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconDelete.fill(Qt::transparent);
-    QPainter painterDelete(&m_iconDelete);
-    QSvgRenderer svgrndrDelete(thm + "actions/16/edit-delete.svg");
-    svgrndrDelete.render(&painterDelete);
+    m_iconDelete = QIcon::fromTheme("edit-delete").pixmap(m_curFontHeight, m_curFontHeight).toImage();
 }
 
 ItemDelegateQueueSongs::ItemDelegateQueueSongs(QObject *parent) :

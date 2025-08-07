@@ -24,6 +24,7 @@
 #include <QSplashScreen>
 #include <QStringList>
 #include <QMessageBox>
+#include <QIcon>
 #include "settings.h"
 #include "idledetect.h"
 #include "runguard/runguard.h"
@@ -152,6 +153,20 @@ int main(int argc, char *argv[]) {
     //QLoggingCategory::setFilterRules("*.debug=true");
     qInstallMessageHandler(myMessageOutput);
     QApplication a(argc, argv);
+    QIcon::setFallbackSearchPaths({
+        ":/theme/Icons/okjbreeze/actions/16",
+        ":/theme/Icons/okjbreeze/actions/22",
+        ":/theme/Icons/okjbreeze/actions/32",
+        ":/theme/Icons/okjbreeze/apps/48",
+        ":/theme/Icons/okjbreeze/status/16",
+        ":/theme/Icons/okjbreeze/mimetypes/22",
+        ":/theme/Icons/okjbreeze-dark/actions/16",
+        ":/theme/Icons/okjbreeze-dark/actions/22",
+        ":/theme/Icons/okjbreeze-dark/actions/32",
+        ":/theme/Icons/okjbreeze-dark/apps/48",
+        ":/theme/Icons/okjbreeze-dark/status/16",
+        ":/theme/Icons/okjbreeze-dark/mimetypes/22"
+    });
 
 #ifdef MAC_OVERRIDE_GST
     // This points GStreamer paths to the framework contained in the app bundle.  Not needed on brew installs.

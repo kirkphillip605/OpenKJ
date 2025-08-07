@@ -28,6 +28,8 @@
 #include <QFileDialog>
 #include <QImageReader>
 #include <QDesktopServices>
+#include <QIcon>
+#include <QSize>
 #include "mzarchive.h"
 #include "tagreader.h"
 #include "dlgeditsong.h"
@@ -88,36 +90,35 @@ void MainWindow::refreshSfxButtons() {
 }
 
 void MainWindow::updateIcons() {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
-    ui->buttonClearRotation->setIcon(QIcon(thm + "actions/22/edit-clear-all.svg"));
-    ui->buttonAddSinger->setIcon(QIcon(thm + "actions/22/list-add-user.svg"));
-    ui->buttonRegulars->setIcon(QIcon(thm + "actions/22/user-others.svg"));
-    ui->btnRotTop->setIcon(QIcon(thm + "actions/22/go-top.svg"));
-    ui->btnRotUp->setIcon(QIcon(thm + "actions/22/go-up.svg"));
-    ui->btnRotBottom->setIcon(QIcon(thm + "actions/22/go-bottom.svg"));
-    ui->btnRotDown->setIcon(QIcon(thm + "actions/22/go-down.svg"));
-    ui->pushButton->setIcon(QIcon(thm + "actions/22/edit-find.svg"));
-    ui->buttonClearQueue->setIcon(QIcon(thm + "actions/22/edit-clear-all.svg"));
-    ui->btnQTop->setIcon(QIcon(thm + "actions/22/go-top.svg"));
-    ui->btnQUp->setIcon(QIcon(thm + "actions/22/go-up.svg"));
-    ui->btnQBottom->setIcon(QIcon(thm + "actions/22/go-bottom.svg"));
-    ui->btnQDown->setIcon(QIcon(thm + "actions/22/go-down.svg"));
-    ui->buttonPause->setIcon(QIcon(thm + "actions/22/media-playback-pause.svg"));
-    ui->buttonStop->setIcon(QIcon(thm + "actions/22/media-playback-stop.svg"));
-    ui->labelVolume->setPixmap(QPixmap(thm + "actions/16/player-volume.svg"));
-    ui->pushButtonTempoDn->setIcon(QIcon(thm + "actions/22/downindicator.svg"));
-    ui->pushButtonTempoUp->setIcon(QIcon(thm + "actions/22/upindicator.svg"));
-    ui->pushButtonKeyDn->setIcon(QIcon(thm + "actions/22/downindicator.svg"));
-    ui->pushButtonKeyUp->setIcon(QIcon(thm + "actions/22/upindicator.svg"));
-    ui->btnSfxStop->setIcon(QIcon(thm + "actions/22/media-playback-stop.svg"));
-    ui->buttonBmPause->setIcon(QIcon(thm + "actions/22/media-playback-pause.svg"));
-    ui->buttonBmStop->setIcon(QIcon(thm + "actions/22/media-playback-stop.svg"));
-    ui->btnPlTop->setIcon(QIcon(thm + "actions/22/go-top.svg"));
-    ui->btnPlUp->setIcon(QIcon(thm + "actions/22/go-up.svg"));
-    ui->btnPlBottom->setIcon(QIcon(thm + "actions/22/go-bottom.svg"));
-    ui->btnPlDown->setIcon(QIcon(thm + "actions/22/go-down.svg"));
-    ui->labelVolumeBm->setPixmap(QPixmap(thm + "actions/16/player-volume.svg"));
-    ui->buttonBmSearch->setIcon(QIcon(thm + "actions/22/edit-find.svg"));
+    ui->buttonClearRotation->setIcon(QIcon::fromTheme("edit-clear-all"));
+    ui->buttonAddSinger->setIcon(QIcon::fromTheme("list-add-user"));
+    ui->buttonRegulars->setIcon(QIcon::fromTheme("user-others"));
+    ui->btnRotTop->setIcon(QIcon::fromTheme("go-top"));
+    ui->btnRotUp->setIcon(QIcon::fromTheme("go-up"));
+    ui->btnRotBottom->setIcon(QIcon::fromTheme("go-bottom"));
+    ui->btnRotDown->setIcon(QIcon::fromTheme("go-down"));
+    ui->pushButton->setIcon(QIcon::fromTheme("edit-find"));
+    ui->buttonClearQueue->setIcon(QIcon::fromTheme("edit-clear-all"));
+    ui->btnQTop->setIcon(QIcon::fromTheme("go-top"));
+    ui->btnQUp->setIcon(QIcon::fromTheme("go-up"));
+    ui->btnQBottom->setIcon(QIcon::fromTheme("go-bottom"));
+    ui->btnQDown->setIcon(QIcon::fromTheme("go-down"));
+    ui->buttonPause->setIcon(QIcon::fromTheme("media-playback-pause"));
+    ui->buttonStop->setIcon(QIcon::fromTheme("media-playback-stop"));
+    ui->labelVolume->setPixmap(QIcon::fromTheme("player-volume").pixmap(QSize(16, 16)));
+    ui->pushButtonTempoDn->setIcon(QIcon::fromTheme("downindicator"));
+    ui->pushButtonTempoUp->setIcon(QIcon::fromTheme("upindicator"));
+    ui->pushButtonKeyDn->setIcon(QIcon::fromTheme("downindicator"));
+    ui->pushButtonKeyUp->setIcon(QIcon::fromTheme("upindicator"));
+    ui->btnSfxStop->setIcon(QIcon::fromTheme("media-playback-stop"));
+    ui->buttonBmPause->setIcon(QIcon::fromTheme("media-playback-pause"));
+    ui->buttonBmStop->setIcon(QIcon::fromTheme("media-playback-stop"));
+    ui->btnPlTop->setIcon(QIcon::fromTheme("go-top"));
+    ui->btnPlUp->setIcon(QIcon::fromTheme("go-up"));
+    ui->btnPlBottom->setIcon(QIcon::fromTheme("go-bottom"));
+    ui->btnPlDown->setIcon(QIcon::fromTheme("go-down"));
+    ui->labelVolumeBm->setPixmap(QIcon::fromTheme("player-volume").pixmap(QSize(16, 16)));
+    ui->buttonBmSearch->setIcon(QIcon::fromTheme("edit-find"));
 
     requestsDialog->updateIcons();
     treatAllSingersAsRegsChanged(m_settings.treatAllSingersAsRegs());

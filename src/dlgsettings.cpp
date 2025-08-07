@@ -28,6 +28,7 @@
 #include <QStandardPaths>
 #include <QMessageBox>
 #include <QSqlQuery>
+#include <QIcon>
 #include <QtSql>
 #include <QXmlStreamWriter>
 #include <QNetworkReply>
@@ -403,7 +404,7 @@ void DlgSettings::setupHotkeysForm() {
         auto sequenceEdit = new QKeySequenceEdit(this);
         sequenceEdit->setObjectName(shortcut.sequenceName);
         sequenceEdit->setKeySequence(m_settings.loadShortcutKeySequence(shortcut.sequenceName));
-        clearButton->setIcon(QIcon(":/theme/Icons/okjbreeze-dark/actions/22/edit-clear.svg"));
+        clearButton->setIcon(QIcon::fromTheme("edit-clear"));
         connect(sequenceEdit, &QKeySequenceEdit::keySequenceChanged, this, &DlgSettings::keySequenceEditChanged);
         connect(clearButton, &QPushButton::pressed, sequenceEdit, &QKeySequenceEdit::clear);
         QHBoxLayout *layout = new QHBoxLayout();
