@@ -50,7 +50,7 @@ if (m_settings.updatesBranch() == 0)
     channel = "stable";
 else
     channel = "unstable";
-//    connect(manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(onNetworkReply(QNetworkReply*)));
+//    connect(manager, &QNetworkAccessManager::finished, this, &UpdateChecker::onNetworkReply);
 }
 
 void UpdateChecker::checkForUpdates()
