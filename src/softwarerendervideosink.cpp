@@ -35,7 +35,8 @@ SoftwareRenderVideoSink::SoftwareRenderVideoSink(QWidget *surface)
 
     m_surface->installEventFilter(this);
 
-    connect(this, SIGNAL(newFrameAvailable()), m_surface, SLOT(update()), Qt::QueuedConnection);
+    connect(this, &SoftwareRenderVideoSink::newFrameAvailable, m_surface,
+            QOverload<>::of(&QWidget::update), Qt::QueuedConnection);
 }
 
 SoftwareRenderVideoSink::~SoftwareRenderVideoSink()
