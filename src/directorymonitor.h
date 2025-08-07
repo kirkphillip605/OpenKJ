@@ -22,11 +22,14 @@ private:
 
     QSet<QString> m_pathsWithChangedFiles;
     QTimer m_scanTimer;
+    QFutureWatcher<bool> m_dbUpdateWatcher;
+    QStringList m_currentlyScanningPaths;
 
     QStringList enumeratePathsAsync(QStringList paths);
     void directoriesEnumerated();
     void directoryChanged(const QString& dirPath);
     void scanPaths();
+    void dbUpdateFinished();
 
 signals:
     void databaseUpdateComplete();
