@@ -414,6 +414,7 @@ set(SOURCE_FILES
         src/dlgvideopreview.cpp
         src/mainwindow.cpp
         src/dbupdater.cpp
+        src/dbupdateworker.cpp
         src/directorymonitor.cpp
         src/dlgkeychange.cpp
         src/dlgdatabase.cpp
