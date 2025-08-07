@@ -16,39 +16,37 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 #ifndef BMDBUPDATETHREAD_H
 #define BMDBUPDATETHREAD_H
 
-#include <QThread>
 #include <QStringList>
+#include <QThread>
 #include <QtSql>
 
-class BmDbUpdateThread : public QThread
-{
-    Q_OBJECT
+class BmDbUpdateThread : public QThread {
+  Q_OBJECT
 public:
-    explicit BmDbUpdateThread(QObject *parent = nullptr);
-    void run() override;
-    void startUnthreaded();
-    [[nodiscard]] QString path() const;
-    void setPath(const QString &path);
+  explicit BmDbUpdateThread(QObject *parent = nullptr);
+  void run() override;
+  void startUnthreaded();
+  [[nodiscard]] QString path() const;
+  void setPath(const QString &path);
 
 signals:
-    void progressMessage(QString msg);
-    void stateChanged(QString state);
-    void progressChanged(int progress, int max);
-    
+  void progressMessage(QString msg);
+  void stateChanged(QString state);
+  void progressChanged(int progress, int max);
+
 public slots:
 
 private:
-    QString m_path;
-    QStringList findMediaFiles(const QString& directory);
-    QStringList supportedExtensions;
-    QSqlDatabase database;
-
-    
+  QString m_path;
+  QStringList findMediaFiles(const QString &directory);
+  QStringList supportedExtensions;
+  QSqlDatabase database;
+  void process(bool processEvents);
 };
 
 #endif // BMDBUPDATETHREAD_H
