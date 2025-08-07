@@ -64,7 +64,8 @@ void LazyDurationUpdateController::getSongsRequiringUpdate()
     files.clear();
     QSqlQuery query;
     query.exec("SELECT path FROM dbsongs WHERE duration < 1 ORDER BY artist, title");
-    files.reserve(query.size());
+    // Append results without pre-reserving to avoid large memory allocations when
+    // processing extensive result sets.
     while (query.next())
     {
         files.append(query.value(0).toString());
