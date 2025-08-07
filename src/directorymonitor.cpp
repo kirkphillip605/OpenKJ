@@ -9,9 +9,10 @@ DirectoryMonitor::DirectoryMonitor(QObject *parent, QStringList pathsToWatch) : 
     m_scanTimer.setSingleShot(true);
     connect(&m_scanTimer, &QTimer::timeout, this, &DirectoryMonitor::scanPaths);
 
-    connect(&m_pathsEnumeratedWatcher, &QFutureWatcher<int>::finished, this, &DirectoryMonitor::directoriesEnumerated);
+    connect(&m_pathsEnumeratedWatcher, &QFutureWatcher<QStringList>::finished, this, &DirectoryMonitor::directoriesEnumerated);
     auto future = QtConcurrent::run(this, &DirectoryMonitor::enumeratePathsAsync, pathsToWatch);
     m_pathsEnumeratedWatcher.setFuture(future);
+    connect(&m_dbUpdateWatcher, &QFutureWatcher<bool>::finished, this, &DirectoryMonitor::dbUpdateFinished);
 }
 
 DirectoryMonitor::~DirectoryMonitor()
@@ -52,20 +53,32 @@ void DirectoryMonitor::directoryChanged(const QString& dirPath)
 
 void DirectoryMonitor::scanPaths()
 {
-    auto paths = m_pathsWithChangedFiles.values();
+    if (m_pathsWithChangedFiles.isEmpty())
+        return;
+
+    if (m_dbUpdateWatcher.isRunning())
+        return;
+
+    m_currentlyScanningPaths = m_pathsWithChangedFiles.values();
     m_pathsWithChangedFiles.clear();
 
-    // Scan the folder for changes and add new files to the database.
-    // Fix moved files to detect files moved between folders (in that case, both folders will be in m_pathsWithChangedFiles).
-    DbUpdater dbUpdater(this);
-    if (dbUpdater.process(paths, DbUpdater::ProcessingOption::FixMovedFiles)) {
+    auto future = QtConcurrent::run([paths = m_currentlyScanningPaths]() {
+        DbUpdater dbUpdater;
+        return dbUpdater.process(paths, DbUpdater::ProcessingOption::FixMovedFiles);
+    });
+    m_dbUpdateWatcher.setFuture(future);
+}
+
+void DirectoryMonitor::dbUpdateFinished()
+{
+    bool success = m_dbUpdateWatcher.future().result();
+    if (success) {
         emit databaseUpdateComplete();
+    } else {
+        m_pathsWithChangedFiles.unite(QSet<QString>(m_currentlyScanningPaths.begin(), m_currentlyScanningPaths.end()));
     }
-    else {
-        // scanning failed - perhaps another scan was running?
-        // Queue a new run
-        m_pathsWithChangedFiles.unite(QSet<QString>(paths.begin(), paths.end()));
-        m_scanTimer.start();
-    }
+    m_currentlyScanningPaths.clear();
+    if (!m_pathsWithChangedFiles.isEmpty())
+        QTimer::singleShot(0, this, &DirectoryMonitor::scanPaths);
 }
 
