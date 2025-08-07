@@ -10,6 +10,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QSvgRenderer>
+#include "thememanager.h"
 
 
 TableModelPlaylistSongs::TableModelPlaylistSongs(TableModelBreakSongs &breakSongsModel, QObject *parent)
@@ -64,7 +65,7 @@ QVariant TableModelPlaylistSongs::data(const QModelIndex &index, int role) const
     }
     if (role == Qt::BackgroundRole) {
         if (m_songs.at(index.row()).id == m_playingPlSongId && m_playingPlaylist == m_curPlaylistId)
-            return (m_settings.theme() == 1) ? QColor(180, 180, 0) : QColor("yellow");
+            return ThemeManager::instance().highlightColor();
         return {};
     }
     if (role == Qt::DisplayRole) {
@@ -269,7 +270,7 @@ int TableModelPlaylistSongs::getSongPositionById(const int plSongId) const {
 }
 
 void ItemDelegatePlaylistSongs::resizeIconsForFont(const QFont &font) {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
+    QString thm = ThemeManager::instance().iconPath();
     m_curFontHeight = QFontMetrics(font).height();
     m_iconDelete = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
     m_iconPlaying = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);

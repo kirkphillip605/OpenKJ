@@ -28,6 +28,7 @@
 #include <QJsonDocument>
 #include <spdlog/spdlog.h>
 #include <spdlog/fmt/ostr.h>
+#include "thememanager.h"
 #include <chrono>
 
 std::ostream& operator<<(std::ostream& os, const QString& s);
@@ -110,7 +111,7 @@ QVariant TableModelRotation::data(const QModelIndex &index, int role) const {
 QVariant TableModelRotation::getBackgroundRole(const QModelIndex &index) const {
     if (m_singers.at(index.row()).id == m_currentSingerId) {
         if (index.column() > 0)
-            return (m_settings.theme() == 1) ? QColor(180, 180, 0) : QColor("yellow");
+            return ThemeManager::instance().highlightColor();
     } else if (index.column() == COL_NAME) {
         const auto &singer = m_singers.at(index.row());
         if (singer.id == m_rotationTopSingerId && m_settings.rotationAltSortOrder())
@@ -599,7 +600,7 @@ void TableModelRotation::resizeIconsForFont(const QFont &font) {
 }
 
 void ItemDelegateRotation::resizeIconsForFont(const QFont &font) {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
+    QString thm = ThemeManager::instance().iconPath();
     m_curFontHeight = QFontMetrics(font).height();
     m_iconDelete = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
     m_iconCurSinger = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);

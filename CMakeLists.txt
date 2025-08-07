@@ -458,6 +458,7 @@ set(SOURCE_FILES
         src/dlgsongshoppurchase.cpp
         src/dlgsetpassword.cpp
         src/dlgpassword.cpp
+        src/thememanager.cpp
         src/dlgpurchaseprogress.cpp
         src/karaokefileinfo.cpp
         src/karaokefilepatternresolver.cpp

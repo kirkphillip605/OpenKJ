@@ -5,6 +5,7 @@
 #include <QSqlError>
 #include <QPainter>
 #include <QSvgRenderer>
+#include "thememanager.h"
 
 
 TableModelHistorySingers::TableModelHistorySingers(QObject *parent)
@@ -190,7 +191,7 @@ okj::HistorySinger TableModelHistorySingers::getSinger(const int historySingerId
 
 void ItemDelegateHistorySingers::resizeIconsForFont(const QFont& font)
 {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
+    QString thm = ThemeManager::instance().iconPath();
     m_curFontHeight = QFontMetrics(font).height();
     m_iconDelete = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
     m_iconLoadReg = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
