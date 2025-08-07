@@ -31,6 +31,8 @@
 #include "mzarchive.h"
 #include "tagreader.h"
 #include "dlgeditsong.h"
+#include <QQuickWidget>
+#include <QQmlContext>
 #include "soundfxbutton.h"
 #include "src/models/tableviewtooltipfilter.h"
 #include "dbupdater.h"
@@ -642,6 +644,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tableViewQueue->setModel(&m_qModel);
     ui->tableViewQueue->setItemDelegate(&m_qDelegate);
     ui->tableViewQueue->viewport()->installEventFilter(new TableViewToolTipFilter(ui->tableViewQueue));
+    auto queueQuickWidget = new QQuickWidget(this);
+    queueQuickWidget->setResizeMode(QQuickWidget::SizeRootObjectToView);
+    queueQuickWidget->rootContext()->setContextProperty("songQueueModel", &m_qModel);
+    queueQuickWidget->setSource(QUrl(QStringLiteral("qrc:/qml/SongQueueView.qml")));
+    ui->verticalLayout_20->replaceWidget(ui->tableViewQueue, queueQuickWidget);
+    ui->tableViewQueue->hide();
     ui->labelNoSinger->setVisible(true);
     ui->tabWidgetQueue->setVisible(false);
     m_mediaTempDir = std::make_unique<QTemporaryDir>();
