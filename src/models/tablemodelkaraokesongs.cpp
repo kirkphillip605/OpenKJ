@@ -3,11 +3,10 @@
 #include <QApplication>
 #include <QSqlQuery>
 #include <QSqlError>
-#include <QPainter>
 #include <QFileInfo>
 #include <QDir>
 #include <QDirIterator>
-#include <QSvgRenderer>
+#include <QIcon>
 #include <QMimeData>
 #include <array>
 
@@ -331,23 +330,10 @@ void TableModelKaraokeSongs::resizeIconsForFont(const QFont &font) {
     m_headerFont.setBold(true);
     m_itemFontMetrics = QFontMetrics(m_itemFont);
     m_itemHeight = m_itemFontMetrics.height() + 6;
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
     m_curFontHeight = QFontMetrics(font).height();
-    m_iconVid = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconZip = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconCdg = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconVid.fill(Qt::transparent);
-    m_iconZip.fill(Qt::transparent);
-    m_iconCdg.fill(Qt::transparent);
-    QPainter painterVid(&m_iconVid);
-    QPainter painterZip(&m_iconZip);
-    QPainter painterCdg(&m_iconCdg);
-    QSvgRenderer svgRndrVid(thm + "mimetypes/22/video-mp4.svg");
-    QSvgRenderer svgRndrZip(thm + "mimetypes/22/application-zip.svg");
-    QSvgRenderer svgRndrCdg(thm + "mimetypes/22/application-x-cda.svg");
-    svgRndrVid.render(&painterVid);
-    svgRndrZip.render(&painterZip);
-    svgRndrCdg.render(&painterCdg);
+    m_iconVid = QIcon::fromTheme("video-mp4").pixmap(m_curFontHeight, m_curFontHeight).toImage();
+    m_iconZip = QIcon::fromTheme("application-zip").pixmap(m_curFontHeight, m_curFontHeight).toImage();
+    m_iconCdg = QIcon::fromTheme("application-x-cda").pixmap(m_curFontHeight, m_curFontHeight).toImage();
 }
 
 

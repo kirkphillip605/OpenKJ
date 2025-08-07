@@ -4,7 +4,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QPainter>
-#include <QSvgRenderer>
+#include <QIcon>
 
 
 TableModelHistorySingers::TableModelHistorySingers(QObject *parent)
@@ -190,18 +190,9 @@ okj::HistorySinger TableModelHistorySingers::getSinger(const int historySingerId
 
 void ItemDelegateHistorySingers::resizeIconsForFont(const QFont& font)
 {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
     m_curFontHeight = QFontMetrics(font).height();
-    m_iconDelete = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconLoadReg = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconDelete.fill(Qt::transparent);
-    m_iconLoadReg.fill(Qt::transparent);
-    QPainter painterDelete(&m_iconDelete);
-    QPainter painterLoad(&m_iconLoadReg);
-    QSvgRenderer svgrndrDelete(thm + "actions/16/edit-delete.svg");
-    QSvgRenderer svgrndrLoad(thm + "actions/16/list-add-user.svg");
-    svgrndrDelete.render(&painterDelete);
-    svgrndrLoad.render(&painterLoad);
+    m_iconDelete = QIcon::fromTheme("edit-delete").pixmap(m_curFontHeight, m_curFontHeight).toImage();
+    m_iconLoadReg = QIcon::fromTheme("list-add-user").pixmap(m_curFontHeight, m_curFontHeight).toImage();
 }
 
 ItemDelegateHistorySingers::ItemDelegateHistorySingers(QObject *parent) :

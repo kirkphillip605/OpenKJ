@@ -9,7 +9,7 @@
 #include <QMimeData>
 #include <QJsonArray>
 #include <QJsonDocument>
-#include <QSvgRenderer>
+#include <QIcon>
 
 
 TableModelPlaylistSongs::TableModelPlaylistSongs(TableModelBreakSongs &breakSongsModel, QObject *parent)
@@ -269,18 +269,9 @@ int TableModelPlaylistSongs::getSongPositionById(const int plSongId) const {
 }
 
 void ItemDelegatePlaylistSongs::resizeIconsForFont(const QFont &font) {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
     m_curFontHeight = QFontMetrics(font).height();
-    m_iconDelete = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconPlaying = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconDelete.fill(Qt::transparent);
-    m_iconPlaying.fill(Qt::transparent);
-    QPainter painterDelete(&m_iconDelete);
-    QPainter painterPlaying(&m_iconPlaying);
-    QSvgRenderer svgrndrDelete(thm + "actions/16/edit-delete.svg");
-    QSvgRenderer svgrndrPlaying(thm + "actions/22/media-playback-start.svg");
-    svgrndrDelete.render(&painterDelete);
-    svgrndrPlaying.render(&painterPlaying);
+    m_iconDelete = QIcon::fromTheme("edit-delete").pixmap(m_curFontHeight, m_curFontHeight).toImage();
+    m_iconPlaying = QIcon::fromTheme("media-playback-start").pixmap(m_curFontHeight, m_curFontHeight).toImage();
 }
 
 ItemDelegatePlaylistSongs::ItemDelegatePlaylistSongs(QObject *parent) :

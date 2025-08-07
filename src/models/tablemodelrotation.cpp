@@ -22,8 +22,9 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDateTime>
-#include <QSvgRenderer>
+#include <QIcon>
 #include <QMimeData>
+#include <QPainter>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <spdlog/spdlog.h>
@@ -599,28 +600,11 @@ void TableModelRotation::resizeIconsForFont(const QFont &font) {
 }
 
 void ItemDelegateRotation::resizeIconsForFont(const QFont &font) {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
     m_curFontHeight = QFontMetrics(font).height();
-    m_iconDelete = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconCurSinger = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconRegularOn = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconRegularOff = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconDelete.fill(Qt::transparent);
-    m_iconCurSinger.fill(Qt::transparent);
-    m_iconRegularOn.fill(Qt::transparent);
-    m_iconRegularOff.fill(Qt::transparent);
-    QPainter painterDelete(&m_iconDelete);
-    QPainter painterPlaying(&m_iconCurSinger);
-    QPainter painterRegularOn(&m_iconRegularOn);
-    QPainter painterRegularOff(&m_iconRegularOff);
-    QSvgRenderer svgRendererDelete(thm + "actions/16/edit-delete.svg");
-    QSvgRenderer svgRendererCurSinger(thm + "status/16/mic-on.svg");
-    QSvgRenderer svgRendererRegularOn(thm + "actions/16/im-user-online.svg");
-    QSvgRenderer svgRendererRegularOff(thm + "actions/16/im-user.svg");
-    svgRendererDelete.render(&painterDelete);
-    svgRendererCurSinger.render(&painterPlaying);
-    svgRendererRegularOn.render(&painterRegularOn);
-    svgRendererRegularOff.render(&painterRegularOff);
+    m_iconDelete = QIcon::fromTheme("edit-delete").pixmap(m_curFontHeight, m_curFontHeight).toImage();
+    m_iconCurSinger = QIcon::fromTheme("mic-on").pixmap(m_curFontHeight, m_curFontHeight).toImage();
+    m_iconRegularOn = QIcon::fromTheme("im-user-online").pixmap(m_curFontHeight, m_curFontHeight).toImage();
+    m_iconRegularOff = QIcon::fromTheme("im-user").pixmap(m_curFontHeight, m_curFontHeight).toImage();
 }
 
 [[maybe_unused]] ItemDelegateRotation::ItemDelegateRotation(QObject *parent) :

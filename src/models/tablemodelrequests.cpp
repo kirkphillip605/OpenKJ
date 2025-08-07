@@ -20,6 +20,7 @@
 
 #include "tablemodelrequests.h"
 #include <QDateTime>
+#include <QIcon>
 
 
 TableModelRequests::TableModelRequests(OKJSongbookAPI &songbookAPI, QObject *parent) :
@@ -27,9 +28,8 @@ TableModelRequests::TableModelRequests(OKJSongbookAPI &songbookAPI, QObject *par
         songbookApi(songbookAPI) {
     m_logger = spdlog::get("logger");
     connect(&songbookApi, &OKJSongbookAPI::requestsChanged, this, &TableModelRequests::requestsChanged);
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
-    delete16 = QIcon(thm + "actions/16/edit-delete.svg");
-    delete22 = QIcon(thm + "actions/22/edit-delete.svg");
+    delete16 = QIcon::fromTheme("edit-delete");
+    delete22 = QIcon::fromTheme("edit-delete");
 }
 
 void TableModelRequests::requestsChanged(const OkjsRequests &requests) {
