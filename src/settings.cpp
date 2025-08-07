@@ -21,7 +21,8 @@
 #include "settings.h"
 #include <QCoreApplication>
 #include <QApplication>
-#include <QDesktopWidget>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QStandardPaths>
 #include <QCryptographicHash>
 #include <QDataStream>
