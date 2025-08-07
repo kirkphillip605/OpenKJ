@@ -1,12 +1,16 @@
 #include "dlgaddsong.h"
 #include "ui_dlgaddsong.h"
 #include <QMessageBox>
+#include "thememanager.h"
 
 
 DlgAddSong::DlgAddSong(TableModelRotation &rotationModel, TableModelQueueSongs &queueModel, int songId, QWidget *parent) :
     QDialog(parent), ui(new Ui::DlgAddSong), m_rotModel(rotationModel), m_queueModel(queueModel), m_songId(songId)
 {
     ui->setupUi(this);
+    QString thm = ThemeManager::instance().iconPath();
+    ui->pushButtonKeyDown->setIcon(QIcon(thm + "actions/22/downindicator.svg"));
+    ui->pushButtonKeyUp->setIcon(QIcon(thm + "actions/22/upindicator.svg"));
     m_rButtons.addButton(ui->radioButtonAddSinger);
     m_rButtons.setId(ui->radioButtonAddSinger, 0);
     m_rButtons.addButton(ui->radioButtonAddToExistingSinger);

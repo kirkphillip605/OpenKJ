@@ -27,6 +27,7 @@
 #include <QProgressDialog>
 #include "src/models/tableviewtooltipfilter.h"
 #include "dlgvideopreview.h"
+#include "thememanager.h"
 
 #include <spdlog/sinks/basic_file_sink.h>
 
@@ -160,7 +161,7 @@ void DlgRequests::rotationChanged() {
 }
 
 void DlgRequests::updateIcons() {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
+    QString thm = ThemeManager::instance().iconPath();
     ui->buttonRefresh->setIcon(QIcon(thm + "actions/22/view-refresh.svg"));
     ui->pushButtonClearReqs->setIcon(QIcon(thm + "actions/22/edit-clear-all.svg"));
     ui->pushButtonSearch->setIcon(QIcon(thm + "actions/22/edit-find.svg"));

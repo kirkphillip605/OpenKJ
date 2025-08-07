@@ -42,6 +42,7 @@
 #include <taglib.h>
 #include <miniz/miniz.h>
 #include "okjtypes.h"
+#include "thememanager.h"
 
 #ifdef _MSC_VER
 #define NOMINMAX
@@ -88,7 +89,7 @@ void MainWindow::refreshSfxButtons() {
 }
 
 void MainWindow::updateIcons() {
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
+    QString thm = ThemeManager::instance().iconPath();
     ui->buttonClearRotation->setIcon(QIcon(thm + "actions/22/edit-clear-all.svg"));
     ui->buttonAddSinger->setIcon(QIcon(thm + "actions/22/list-add-user.svg"));
     ui->buttonRegulars->setIcon(QIcon(thm + "actions/22/user-others.svg"));
@@ -728,7 +729,7 @@ MainWindow::MainWindow(QWidget *parent) :
 }
 
 void MainWindow::loadSettings() {
-    if (m_settings.theme() != 0) {
+    if (ThemeManager::instance().currentTheme() != ThemeManager::System) {
         ui->pushButtonIncomingRequests->setStyleSheet("");
         update();
     }
@@ -2653,9 +2654,9 @@ void MainWindow::timerButtonFlashTimeout() {
 
     if (requestsDialog->numRequests() > 0) {
         static bool flashed = false;
-        if (m_settings.theme() != 0) {
+        if (ThemeManager::instance().currentTheme() != ThemeManager::System) {
             auto normal = this->palette().button().color();
-            auto blink = QColor("yellow");
+            auto blink = ThemeManager::instance().highlightColor();
             auto blinkTxt = QColor("black");
             auto normalTxt = this->palette().buttonText().color();
             auto palette = QPalette(ui->pushButtonIncomingRequests->palette());
@@ -2673,7 +2674,7 @@ void MainWindow::timerButtonFlashTimeout() {
         }
         update();
     } else if (ui->pushButtonIncomingRequests->text() != "Requests") {
-        if (m_settings.theme() != 0) {
+        if (ThemeManager::instance().currentTheme() != ThemeManager::System) {
             ui->pushButtonIncomingRequests->setPalette(this->palette());
             ui->pushButtonIncomingRequests->setText("Requests");
         } else {

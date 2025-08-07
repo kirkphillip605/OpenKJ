@@ -191,9 +191,9 @@ DlgSettings::DlgSettings(MediaBackend &AudioBackend, MediaBackend &BmAudioBacken
         ui->comboBoxCodec->setCurrentIndex(ui->comboBoxCodec->findText(m_settings.recordingCodec()));
     ui->comboBoxUpdateBranch->addItem("Stable");
     ui->comboBoxUpdateBranch->addItem("Development");
-    ui->cbxTheme->addItem("OS Native");
-    ui->cbxTheme->addItem("Fusion Dark");
-    ui->cbxTheme->addItem("Fusion Light");
+    ui->cbxTheme->addItem("System");
+    ui->cbxTheme->addItem("Dark");
+    ui->cbxTheme->addItem("Light");
     ui->cbxTheme->setCurrentIndex(m_settings.theme());
     ui->lineEditOutputDir->setText(m_settings.recordingOutputDir());
     ui->cbxTickerShowRotationInfo->setChecked(m_settings.tickerShowRotationInfo());

@@ -9,6 +9,7 @@
 #include <QDirIterator>
 #include <QSvgRenderer>
 #include <QMimeData>
+#include "thememanager.h"
 #include <array>
 
 std::ostream & operator<<(std::ostream& os, const QString& s);
@@ -331,7 +332,7 @@ void TableModelKaraokeSongs::resizeIconsForFont(const QFont &font) {
     m_headerFont.setBold(true);
     m_itemFontMetrics = QFontMetrics(m_itemFont);
     m_itemHeight = m_itemFontMetrics.height() + 6;
-    QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
+    QString thm = ThemeManager::instance().iconPath();
     m_curFontHeight = QFontMetrics(font).height();
     m_iconVid = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
     m_iconZip = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);

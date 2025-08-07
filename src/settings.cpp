@@ -1635,7 +1635,7 @@ int Settings::updatesBranch()
 
 int Settings::theme() const
 {
-    return settings->value("theme", 1).toInt();
+    return settings->value("theme", 0).toInt();
 }
 
 const QPoint Settings::durationPosition()
