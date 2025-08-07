@@ -104,12 +104,23 @@ bool MzArchive::extractAudio(const QString& destPath, const QString& destFile)
         }
         mz_zip_archive archive;
         memset(&archive, 0, sizeof(archive));
-        //mz_zip_reader_init_file(&archive, archiveFile.toLocal8Bit(), 0);
+
         QFile zipFile(archiveFile);
-        zipFile.open(QIODevice::ReadOnly);
-        QByteArray zipData = zipFile.readAll();
+        if (!zipFile.open(QIODevice::ReadOnly))
+        {
+            m_logger->warn("{} Error opening zip file!", m_loggingPrefix);
+            m_logger->warn("{} Attempting to fall back to external infozip method", m_loggingPrefix);
+            return oka.extractAudio(destPath, destFile);
+        }
         zipFile.close();
-        mz_zip_reader_init_mem(&archive, zipData.data(), zipData.size(), 0);
+
+        QByteArray archiveFileLocal = archiveFile.toLocal8Bit();
+        if (!mz_zip_reader_init_file(&archive, archiveFileLocal.constData(), 0))
+        {
+            m_logger->warn("{} Error opening zip file!", m_loggingPrefix);
+            m_logger->warn("{} Attempting to fall back to external infozip method", m_loggingPrefix);
+            return oka.extractAudio(destPath, destFile);
+        }
         if (mz_zip_reader_extract_to_file(&archive, m_audioFileIndex, QString(destPath + QDir::separator() + destFile).toLocal8Bit(),0))
         {
             mz_zip_reader_end(&archive);
@@ -140,11 +151,23 @@ bool MzArchive::extractCdg(const QString& destPath, const QString& destFile)
         }
         mz_zip_archive archive;
         memset(&archive, 0, sizeof(archive));
+
         QFile zipFile(archiveFile);
-        zipFile.open(QIODevice::ReadOnly);
-        QByteArray zipData = zipFile.readAll();
+        if (!zipFile.open(QIODevice::ReadOnly))
+        {
+            m_logger->warn("{} Error opening zip file!", m_loggingPrefix);
+            m_logger->warn("{} Attempting to fall back to external infozip method", m_loggingPrefix);
+            return oka.extractCdg(destPath, destFile);
+        }
         zipFile.close();
-        mz_zip_reader_init_mem(&archive, zipData.data(), zipData.size(), 0);
+
+        QByteArray archiveFileLocal = archiveFile.toLocal8Bit();
+        if (!mz_zip_reader_init_file(&archive, archiveFileLocal.constData(), 0))
+        {
+            m_logger->warn("{} Error opening zip file!", m_loggingPrefix);
+            m_logger->warn("{} Attempting to fall back to external infozip method", m_loggingPrefix);
+            return oka.extractCdg(destPath, destFile);
+        }
         if (mz_zip_reader_extract_to_file(&archive, m_cdgFileIndex, QString(destPath + QDir::separator() + destFile).toLocal8Bit(),0))
         {
             mz_zip_reader_end(&archive);
@@ -154,9 +177,10 @@ bool MzArchive::extractCdg(const QString& destPath, const QString& destFile)
         {
             m_logger->warn("{} Failed to extract cdg file", m_loggingPrefix);
             auto err = mz_zip_get_error_string(mz_zip_get_last_error(&archive));
-            m_logger->warn("{} Unzip error: ", m_loggingPrefix, err);
+            m_logger->warn("{} Unzip error: {}", m_loggingPrefix, err);
             mz_zip_reader_end(&archive);
-            return false;
+            m_logger->warn("{} Attempting to fall back to external infozip method", m_loggingPrefix);
+            return oka.extractCdg(destPath, destFile);
         }
     }
     return false;
@@ -231,9 +255,10 @@ bool MzArchive::findEntries()
         m_logger->warn("{} Error opening zip file!", m_loggingPrefix);
         return false;
     }
-    QByteArray zipData = zipFile.readAll();
     zipFile.close();
-    if (!mz_zip_reader_init_mem(&archive, zipData.data(), zipData.size(), 0))
+
+    QByteArray archiveFileLocal = archiveFile.toLocal8Bit();
+    if (!mz_zip_reader_init_file(&archive, archiveFileLocal.constData(), 0))
     {
         m_logger->warn("{} Error opening zip file!", m_loggingPrefix);
         return false;
