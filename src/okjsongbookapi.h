@@ -64,6 +64,9 @@ private:
     bool cancelUpdate;
     bool updateInProgress;
     Settings m_settings;
+    static constexpr int kMaxRetries{3};
+    void sendRequest(const QJsonObject &payload, const QString &command, int attempt = 0);
+    void processReplyJson(const QString &command, const QJsonDocument &json);
 
 public:
     explicit OKJSongbookAPI(QObject *parent = nullptr);
