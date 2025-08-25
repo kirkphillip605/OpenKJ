@@ -13,6 +13,8 @@
 
 std::ostream & operator<<(std::ostream& os, const QString& s);
 
+QHash<QString, IconSet> TableModelKaraokeSongs::s_iconCache;
+
 TableModelKaraokeSongs::TableModelKaraokeSongs(QObject *parent)
         : QAbstractTableModel(parent) {
     m_logger = spdlog::get("logger");
@@ -167,16 +169,22 @@ QVariant TableModelKaraokeSongs::getItemDisplayData(const QModelIndex &index) co
     }
 }
 
-void TableModelKaraokeSongs::loadData() {
-    emit layoutAboutToBeChanged();
-    m_allSongs.clear();
-    m_filteredSongs.clear();
+bool TableModelKaraokeSongs::canFetchMore(const QModelIndex &parent) const {
+    if (parent.isValid())
+        return false;
+    return m_canFetch;
+}
+
+void TableModelKaraokeSongs::fetchMore(const QModelIndex &parent) {
+    if (parent.isValid() || !m_canFetch)
+        return;
     QSqlQuery query;
-    query.exec("SELECT songid,artist,title,discid,duration,filename,path,searchstring,plays,lastplay FROM dbsongs");
-    if (query.size() > 0)
-        m_filteredSongs.reserve(query.size());
+    query.prepare("SELECT songid,artist,title,discid,duration,filename,path,searchstring,plays,lastplay FROM dbsongs LIMIT :lim OFFSET :off");
+    query.bindValue(":lim", m_batchSize);
+    query.bindValue(":off", m_loadedSongs);
+    query.exec();
     while (query.next()) {
-        auto song = m_allSongs.emplace_back(std::make_shared<okj::KaraokeSong>(okj::KaraokeSong{
+        m_allSongs.emplace_back(std::make_shared<okj::KaraokeSong>(okj::KaraokeSong{
                 query.value(0).toInt(),
                 query.value(1).toString(),
                 query.value(1).toString().toLower(),
@@ -194,9 +202,26 @@ void TableModelKaraokeSongs::loadData() {
                 (query.value(3).toString() == "!!DROPPED!!")
         }));
     }
-    m_logger->info("{} Loaded {} karaoke songs from the db on disk", m_loggingPrefix, m_filteredSongs.size());
-    search(m_lastSearch);
+    m_loadedSongs = m_allSongs.size();
+    m_canFetch = (m_loadedSongs < m_totalSongs);
+    searchTimer.stop();
+    searchExec();
+}
+
+void TableModelKaraokeSongs::loadData() {
+    emit layoutAboutToBeChanged();
+    m_allSongs.clear();
+    m_filteredSongs.clear();
+    QSqlQuery countQuery("SELECT COUNT(*) FROM dbsongs");
+    if (countQuery.next())
+        m_totalSongs = countQuery.value(0).toInt();
+    else
+        m_totalSongs = 0;
+    m_loadedSongs = 0;
+    m_canFetch = m_totalSongs > 0;
     emit layoutChanged();
+    if (m_canFetch)
+        fetchMore(QModelIndex());
 }
 
 void TableModelKaraokeSongs::search(const QString &searchString) {
@@ -333,21 +358,45 @@ void TableModelKaraokeSongs::resizeIconsForFont(const QFont &font) {
     m_itemHeight = m_itemFontMetrics.height() + 6;
     QString thm = (m_settings.theme() == 1) ? ":/theme/Icons/okjbreeze-dark/" : ":/theme/Icons/okjbreeze/";
     m_curFontHeight = QFontMetrics(font).height();
-    m_iconVid = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconZip = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconCdg = QImage(m_curFontHeight, m_curFontHeight, QImage::Format_ARGB32);
-    m_iconVid.fill(Qt::transparent);
-    m_iconZip.fill(Qt::transparent);
-    m_iconCdg.fill(Qt::transparent);
-    QPainter painterVid(&m_iconVid);
-    QPainter painterZip(&m_iconZip);
-    QPainter painterCdg(&m_iconCdg);
-    QSvgRenderer svgRndrVid(thm + "mimetypes/22/video-mp4.svg");
-    QSvgRenderer svgRndrZip(thm + "mimetypes/22/application-zip.svg");
-    QSvgRenderer svgRndrCdg(thm + "mimetypes/22/application-x-cda.svg");
-    svgRndrVid.render(&painterVid);
-    svgRndrZip.render(&painterZip);
-    svgRndrCdg.render(&painterCdg);
+    const QString cacheKey = thm + QString::number(m_curFontHeight);
+    if (s_iconCache.contains(cacheKey)) {
+        const IconSet &set = s_iconCache.value(cacheKey);
+        m_iconVid = set.vid;
+        m_iconZip = set.zip;
+        m_iconCdg = set.cdg;
+        return;
+    }
+    if (m_iconWatcher.isRunning())
+        m_iconWatcher.cancel();
+    auto future = QtConcurrent::run([thm, h = m_curFontHeight]() -> IconSet {
+        IconSet set;
+        set.vid = QImage(h, h, QImage::Format_ARGB32);
+        set.zip = QImage(h, h, QImage::Format_ARGB32);
+        set.cdg = QImage(h, h, QImage::Format_ARGB32);
+        set.vid.fill(Qt::transparent);
+        set.zip.fill(Qt::transparent);
+        set.cdg.fill(Qt::transparent);
+        QPainter pv(&set.vid);
+        QPainter pz(&set.zip);
+        QPainter pc(&set.cdg);
+        QSvgRenderer rv(thm + "mimetypes/22/video-mp4.svg");
+        QSvgRenderer rz(thm + "mimetypes/22/application-zip.svg");
+        QSvgRenderer rc(thm + "mimetypes/22/application-x-cda.svg");
+        rv.render(&pv);
+        rz.render(&pz);
+        rc.render(&pc);
+        return set;
+    });
+    connect(&m_iconWatcher, &QFutureWatcher<IconSet>::finished, this, [this, cacheKey]() {
+        IconSet set = m_iconWatcher.result();
+        s_iconCache.insert(cacheKey, set);
+        m_iconVid = set.vid;
+        m_iconZip = set.zip;
+        m_iconCdg = set.cdg;
+        if (rowCount() > 0)
+            emit dataChanged(index(0, COL_SONGID), index(rowCount() - 1, COL_SONGID), QVector<int>{Qt::DecorationRole});
+    });
+    m_iconWatcher.setFuture(future);
 }
 
 

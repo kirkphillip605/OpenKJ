@@ -3,15 +3,24 @@
 
 #include <QAbstractTableModel>
 #include <QDateTime>
+#include <QFutureWatcher>
+#include <QHash>
 #include <QImage>
-#include <memory>
 #include <QTimer>
+#include <memory>
+#include <QtConcurrent>
 #include "settings.h"
-#include <spdlog/spdlog.h>
 #include <spdlog/async_logger.h>
+#include <spdlog/spdlog.h>
 #include "okjtypes.h"
 
 
+
+struct IconSet {
+    QImage vid;
+    QImage zip;
+    QImage cdg;
+};
 
 class TableModelKaraokeSongs : public QAbstractTableModel {
 Q_OBJECT
@@ -45,6 +54,8 @@ public:
     [[nodiscard]] QMimeData *mimeData(const QModelIndexList &indexes) const override;
     [[nodiscard]] Qt::ItemFlags flags(const QModelIndex &index) const override;
     [[nodiscard]] QVariant data(const QModelIndex &index, int role) const override;
+    [[nodiscard]] bool canFetchMore(const QModelIndex &parent) const override;
+    void fetchMore(const QModelIndex &parent) override;
     void loadData();
     void sort(int column, Qt::SortOrder order) override;
     void search(const QString &searchString);
@@ -69,6 +80,12 @@ private:
     QImage m_iconCdg;
     QImage m_iconZip;
     QImage m_iconVid;
+    QFutureWatcher<IconSet> m_iconWatcher;
+    bool m_canFetch{false};
+    int m_batchSize{100};
+    int m_totalSongs{0};
+    int m_loadedSongs{0};
+    static QHash<QString, IconSet> s_iconCache;
     SearchType m_searchType{SearchType::SEARCH_TYPE_ALL};
     Settings m_settings;
     QFont m_itemFont;
