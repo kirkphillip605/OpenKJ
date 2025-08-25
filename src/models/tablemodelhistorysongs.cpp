@@ -6,6 +6,8 @@
 #include <QSqlError>
 #include <QFontMetrics>
 #include <QSqlQuery>
+#include "logging.h"
+#include "error.h"
 
 TableModelHistorySongs::TableModelHistorySongs(TableModelKaraokeSongs &songsModel) : m_karaokeSongsModel(songsModel) {
     m_logger = spdlog::get("logger");
@@ -153,8 +155,10 @@ void TableModelHistorySongs::saveSong(const QString &singerName, const QString &
         query.bindValue(":historysinger", historySingerId);
         query.bindValue(":datetime", QDateTime::currentDateTime());
         query.exec();
-        if (auto error = query.lastError(); error.type() != QSqlError::NoError)
-            m_logger->error("{} DB error: {}", m_loggingPrefix, error.text());
+        if (auto error = query.lastError(); error.type() != QSqlError::NoError) {
+            auto err = okj::Error::fromSqlError(error);
+            qCWarning(dbLog) << err.message;
+        }
         loadSinger(m_currentSinger);
         return;
     }
@@ -172,8 +176,10 @@ void TableModelHistorySongs::saveSong(const QString &singerName, const QString &
     query.bindValue(":historySinger", historySingerId);
     query.bindValue(":datetime", QDateTime::currentDateTime());
     query.exec();
-    if (auto error = query.lastError(); error.type() != QSqlError::NoError)
-        m_logger->error("{} DB error: {}", m_loggingPrefix, error.text());
+    if (auto error = query.lastError(); error.type() != QSqlError::NoError) {
+        auto err = okj::Error::fromSqlError(error);
+        qCWarning(dbLog) << err.message;
+    }
     loadSinger(m_currentSinger);
 }
 

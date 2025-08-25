@@ -28,7 +28,8 @@
 #include "idledetect.h"
 #include "runguard/runguard.h"
 #include "okjversion.h"
-#include <spdlog/sinks/basic_file_sink.h>
+#include "logging.h"
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/async_logger.h>
 #include <spdlog/async.h>
@@ -48,6 +49,11 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QS
     if (context.function) {
         logMsg.append(" [");
         logMsg.append(context.function);
+        logMsg.append("]");
+    }
+    if (context.category) {
+        logMsg.append(" [");
+        logMsg.append(context.category);
         logMsg.append("]");
     }
     switch (type) {
@@ -80,7 +86,7 @@ int main(int argc, char *argv[]) {
     logFilePath = logDir + QDir::separator() + filename;
 
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(logFilePath.toStdString(), false);
+    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logFilePath.toStdString(), 1024 * 1024 * 5, 3);
     spdlog::init_thread_pool(8192, 2);
     std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
     logger = std::make_shared<spdlog::async_logger>("logger", sinks.begin(), sinks.end(), spdlog::thread_pool(),
@@ -146,11 +152,9 @@ int main(int argc, char *argv[]) {
     console_sink->set_pattern("[%^%l%$] %v");
     file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
 
-    logger->info("OpenKJ version {} starting up", OKJ_VERSION_STRING);
-
-
-    //QLoggingCategory::setFilterRules("*.debug=true");
     qInstallMessageHandler(myMessageOutput);
+    qCInfo(appLog) << "OpenKJ version" << OKJ_VERSION_STRING << "starting up";
+    //QLoggingCategory::setFilterRules("*.debug=true");
     QApplication a(argc, argv);
 
 #ifdef MAC_OVERRIDE_GST
