@@ -26,23 +26,22 @@
 #include <QFileInfo>
 #include <QApplication>
 #include "tagreader.h"
-#include <QtConcurrent>
 
 BmDbUpdateThread::BmDbUpdateThread(QObject *parent) :
     QThread(parent)
 {
-    supportedExtensions.append(".mp3");
-    supportedExtensions.append(".wav");
-    supportedExtensions.append(".ogg");
-    supportedExtensions.append(".flac");
-    supportedExtensions.append(".m4a");
-    supportedExtensions.append(".mkv");
-    supportedExtensions.append(".avi");
-    supportedExtensions.append(".mp4");
-    supportedExtensions.append(".mpg");
-    supportedExtensions.append(".mpeg");
-    supportedExtensions.append(".wmv");
-    supportedExtensions.append(".wma");
+    m_supportedExtensions.append(".mp3");
+    m_supportedExtensions.append(".wav");
+    m_supportedExtensions.append(".ogg");
+    m_supportedExtensions.append(".flac");
+    m_supportedExtensions.append(".m4a");
+    m_supportedExtensions.append(".mkv");
+    m_supportedExtensions.append(".avi");
+    m_supportedExtensions.append(".mp4");
+    m_supportedExtensions.append(".mpg");
+    m_supportedExtensions.append(".mpeg");
+    m_supportedExtensions.append(".wmv");
+    m_supportedExtensions.append(".wma");
 }
 
 QString BmDbUpdateThread::path() const
@@ -64,10 +63,8 @@ QStringList BmDbUpdateThread::findMediaFiles(const QString& directory)
         iterator.next();
         if (!iterator.fileInfo().isDir()) {
             QString filename = iterator.filePath();
-            for (int i=0; i<supportedExtensions.size(); i++)
-            {
-                if (filename.endsWith(supportedExtensions.at(i),Qt::CaseInsensitive))
-                {
+            for (int i = 0; i < m_supportedExtensions.size(); i++) {
+                if (filename.endsWith(m_supportedExtensions.at(i), Qt::CaseInsensitive)) {
                     files.append(filename);
                     break;
                 }

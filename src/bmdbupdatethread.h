@@ -45,7 +45,7 @@ public slots:
 private:
     QString m_path;
     QStringList findMediaFiles(const QString& directory);
-    QStringList supportedExtensions;
+    QStringList m_supportedExtensions;
 
     
 };
