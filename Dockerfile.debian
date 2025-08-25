@@ -1,0 +1,24 @@
+FROM debian:12
+
+ENV DEBIAN_FRONTEND='noninteractive'
+
+RUN apt-get -qq update && \
+	apt-get -qq -y upgrade && \
+	apt-get -qq -y install \
+	cmake \
+	ninja-build \
+	qtbase5-dev \
+	libqt5svg5-dev \
+	qtmultimedia5-dev \
+	libgstreamer1.0-dev \
+	libtagc0-dev \
+	libspdlog-dev \
+	libgstreamer-plugins-base1.0-dev \
+	&& \
+	rm -rf /var/cache/apt/*
+
+COPY ./ /openkj/
+WORKDIR /openkj/
+RUN cmake -DSPDLOG_USE_BUNDLED=true . -B build -G Ninja
+RUN ninja -C build
+
