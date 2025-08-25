@@ -4,9 +4,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QCryptographicHash>
-#include <QEventLoop>
 #include <QFileInfo>
 #include <QDir>
+#include <QFile>
 
 
 SongShop::SongShop(QObject *parent) : QObject(parent) {
@@ -86,21 +86,22 @@ void SongShop::downloadFile(const QString &url, const QString &destFn) {
     if (!QDir(destDir).exists())
         QDir().mkdir(destDir);
     QString destPath = destDir + destFn;
-    QNetworkAccessManager m_NetworkMngr;
-    QNetworkReply *reply = m_NetworkMngr.get(QNetworkRequest(url));
-    QEventLoop loop;
-    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    connect(reply, &QNetworkReply::downloadProgress, this, &SongShop::onDownloadProgress);
-    loop.exec();
-    QUrl aUrl(url);
-    QFileInfo fileInfo = aUrl.path();
-    QFile file(destPath);
-    file.open(QIODevice::WriteOnly);
-    file.write(reply->readAll());
-    delete reply;
-    emit karaokeSongDownloaded(destPath);
-    // clear session ID to force login again before next download.  Workaround for expiring PartyTyme logins.
-    knSessionId = "";
+    if (m_downloadReply)
+        return;
+    m_cancelDownload = false;
+    m_downloadFile.setFileName(destPath);
+    if (!m_downloadFile.open(QIODevice::WriteOnly))
+        return;
+    QNetworkRequest request(QUrl(url));
+    m_downloadReply = manager->get(request);
+    connect(m_downloadReply, &QNetworkReply::finished, this, &SongShop::onDownloadFinished, Qt::QueuedConnection);
+    connect(m_downloadReply, &QNetworkReply::downloadProgress, this, &SongShop::onDownloadProgress, Qt::QueuedConnection);
+}
+
+void SongShop::cancelDownload() {
+    m_cancelDownload = true;
+    if (m_downloadReply)
+        m_downloadReply->abort();
 }
 
 void SongShop::onSslErrors(QNetworkReply *reply, QList<QSslError> errors) {
@@ -172,6 +173,21 @@ void SongShop::onNetworkReply(QNetworkReply *reply) {
         emit paymentProcessingFailed();
     } else
         m_logger->warn("{} Unexpected JSON data received: {}", m_loggingPrefix, data.toStdString());
+}
+
+void SongShop::onDownloadFinished() {
+    if (!m_downloadReply)
+        return;
+    if (m_cancelDownload || m_downloadReply->error() == QNetworkReply::OperationCanceledError) {
+        m_downloadFile.remove();
+    } else {
+        m_downloadFile.write(m_downloadReply->readAll());
+        emit karaokeSongDownloaded(m_downloadFile.fileName());
+        knSessionId = "";
+    }
+    m_downloadFile.close();
+    m_downloadReply->deleteLater();
+    m_downloadReply = nullptr;
 }
 
 void SongShop::onDownloadProgress(qint64 received, qint64 total) {
