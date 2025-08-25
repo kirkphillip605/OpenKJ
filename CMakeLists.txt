@@ -412,6 +412,7 @@ set(SOURCE_FILES
         src/main.cpp
         src/dlgaddsong.cpp
         src/mediabackend.cpp
+        src/mediaservice.cpp
         src/mzarchive.cpp
         src/okjutil.h
         src/okjtypes.cpp
@@ -475,6 +476,7 @@ set(SOURCE_FILES
         src/dlgaddsong.h
         src/dlgvideopreview.h
         src/mediabackend.h
+        src/mediaservice.h
         src/mzarchive.h
         src/okjutil.h
         src/okjtypes.h
