@@ -56,6 +56,7 @@ private:
     std::unique_ptr<Ui::BmDbDialog> ui;
     QSqlTableModel m_pathsModel;
     DlgDbUpdate m_dbUpdateDlg{this};
+    void updateNextPath(int index);
 };
 
 #endif // BMDBDIALOG_H

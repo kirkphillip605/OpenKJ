@@ -77,32 +77,22 @@ void BmDbDialog::pushButtonUpdateClicked() {
     m_dbUpdateDlg.show();
     auto thread = new BmDbUpdateThread(this);
     thread->setPath(path);
-    connect(thread, &BmDbUpdateThread::progressMessage, &m_dbUpdateDlg, &DlgDbUpdate::addLogMsg);
-    connect(thread, &BmDbUpdateThread::stateChanged, &m_dbUpdateDlg, &DlgDbUpdate::changeStatusTxt);
-    connect(thread, &BmDbUpdateThread::progressChanged, &m_dbUpdateDlg, &DlgDbUpdate::changeProgress);
-    thread->startUnthreaded();
-    QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
-    m_dbUpdateDlg.hide();
-    emit bmDbUpdated();
-    delete (thread);
+    connect(thread, &BmDbUpdateThread::progressMessage, &m_dbUpdateDlg, &DlgDbUpdate::addLogMsg, Qt::QueuedConnection);
+    connect(thread, &BmDbUpdateThread::stateChanged, &m_dbUpdateDlg, &DlgDbUpdate::changeStatusTxt, Qt::QueuedConnection);
+    connect(thread, &BmDbUpdateThread::progressChanged, &m_dbUpdateDlg, &DlgDbUpdate::changeProgress, Qt::QueuedConnection);
+    connect(thread, &QThread::finished, this, [this, thread]() {
+        QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
+        m_dbUpdateDlg.hide();
+        emit bmDbUpdated();
+        thread->deleteLater();
+    }, Qt::QueuedConnection);
+    thread->start();
 }
 
 void BmDbDialog::pushButtonUpdateAllClicked() {
     m_dbUpdateDlg.reset();
     m_dbUpdateDlg.show();
-    for (int i = 0; i < m_pathsModel.rowCount(); i++) {
-        QApplication::processEvents();
-        auto thread = new BmDbUpdateThread(this);
-        thread->setPath(m_pathsModel.data(m_pathsModel.index(i, 0)).toString());
-        connect(thread, &BmDbUpdateThread::progressMessage, &m_dbUpdateDlg, &DlgDbUpdate::addLogMsg);
-        connect(thread, &BmDbUpdateThread::stateChanged, &m_dbUpdateDlg, &DlgDbUpdate::changeStatusTxt);
-        connect(thread, &BmDbUpdateThread::progressChanged, &m_dbUpdateDlg, &DlgDbUpdate::changeProgress);
-        thread->startUnthreaded();
-        delete (thread);
-    }
-    QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
-    m_dbUpdateDlg.hide();
-    emit bmDbUpdated();
+    updateNextPath(0);
 }
 
 void BmDbDialog::pushButtonClearDbClicked() {
@@ -128,6 +118,26 @@ void BmDbDialog::pushButtonDeleteClicked() {
     m_pathsModel.removeRow(ui->tableViewPaths->selectionModel()->selectedIndexes().at(0).row());
     m_pathsModel.select();
     m_pathsModel.submitAll();
+}
+
+void BmDbDialog::updateNextPath(int index) {
+    if (index >= m_pathsModel.rowCount()) {
+        QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
+        m_dbUpdateDlg.hide();
+        emit bmDbUpdated();
+        return;
+    }
+    auto path = m_pathsModel.data(m_pathsModel.index(index, 0)).toString();
+    auto thread = new BmDbUpdateThread(this);
+    thread->setPath(path);
+    connect(thread, &BmDbUpdateThread::progressMessage, &m_dbUpdateDlg, &DlgDbUpdate::addLogMsg, Qt::QueuedConnection);
+    connect(thread, &BmDbUpdateThread::stateChanged, &m_dbUpdateDlg, &DlgDbUpdate::changeStatusTxt, Qt::QueuedConnection);
+    connect(thread, &BmDbUpdateThread::progressChanged, &m_dbUpdateDlg, &DlgDbUpdate::changeProgress, Qt::QueuedConnection);
+    connect(thread, &QThread::finished, this, [this, thread, index]() {
+        thread->deleteLater();
+        updateNextPath(index + 1);
+    }, Qt::QueuedConnection);
+    thread->start();
 }
 
 

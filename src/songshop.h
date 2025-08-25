@@ -5,6 +5,7 @@
 #include <QNetworkReply>
 #include <QObject>
 #include <QUrl>
+#include <QFile>
 #include "settings.h"
 #include <spdlog/spdlog.h>
 #include <spdlog/async_logger.h>
@@ -53,6 +54,9 @@ private:
     QString knSessionId;
     bool knLoginError;
     void downloadFile(const QString &url, const QString &destFn);
+    QNetworkReply *m_downloadReply{nullptr};
+    QFile m_downloadFile;
+    bool m_cancelDownload{false};
     QString dlArtist;
     QString dlTitle;
     QString dlSongId;
@@ -69,10 +73,13 @@ signals:
 
 public slots:
 
+    void cancelDownload();
+
 private slots:
     void onSslErrors(QNetworkReply * reply, QList<QSslError> errors);
     void onNetworkReply(QNetworkReply* reply);
     void onDownloadProgress(qint64 received, qint64 total);
+    void onDownloadFinished();
 };
 
 #endif // SONGSHOP_H

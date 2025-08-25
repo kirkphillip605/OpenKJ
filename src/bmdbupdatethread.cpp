@@ -102,6 +102,8 @@ void BmDbUpdateThread::run()
     query.prepare("INSERT OR IGNORE INTO bmsongs (artist,title,path,filename,duration,searchstring) VALUES(:artist, :title, :path, :filename, :duration, :searchstring)");
     for (int i=0; i < files.size(); i++)
     {
+        if (m_cancelRequested.load())
+            break;
         QFileInfo fi(files.at(i));
         emit progressMessage("Processing file: " + fi.fileName());
         reader.setMedia(files.at(i));
@@ -117,9 +119,14 @@ void BmDbUpdateThread::run()
         query.exec();
         emit progressChanged(i + 1, files.size());
     }
-    query.exec("COMMIT TRANSACTION");
+    if (m_cancelRequested.load()) {
+        query.exec("ROLLBACK TRANSACTION");
+        emit progressMessage("Update canceled for directory: " + m_path);
+    } else {
+        query.exec("COMMIT TRANSACTION");
+        emit progressMessage("Finished processing files for directory: " + m_path);
+    }
     qInfo() << query.lastError();
-    emit progressMessage("Finished processing files for directory: " + m_path);
     database.close();
 }
 
@@ -147,6 +154,8 @@ void BmDbUpdateThread::startUnthreaded()
     query.prepare("INSERT OR IGNORE INTO bmsongs (artist,title,path,filename,duration,searchstring) VALUES(:artist, :title, :path, :filename, :duration, :searchstring)");
     for (int i=0; i < files.size(); i++)
     {
+        if (m_cancelRequested.load())
+            break;
         QApplication::processEvents();
         QFileInfo fi(files.at(i));
         emit progressMessage("Processing file: " + fi.fileName());
@@ -163,7 +172,17 @@ void BmDbUpdateThread::startUnthreaded()
         query.exec();
         emit progressChanged(i + 1, files.size());
     }
-    database.commit();
+    if (m_cancelRequested.load()) {
+        database.rollback();
+        emit progressMessage("Update canceled for directory: " + m_path);
+    } else {
+        database.commit();
+        emit progressMessage("Finished processing files for directory: " + m_path);
+    }
     qInfo() << query.lastError();
-    emit progressMessage("Finished processing files for directory: " + m_path);
+}
+
+void BmDbUpdateThread::cancel()
+{
+    m_cancelRequested.store(true);
 }

@@ -24,6 +24,7 @@
 #include <QThread>
 #include <QStringList>
 #include <QtSql>
+#include <atomic>
 
 class BmDbUpdateThread : public QThread
 {
@@ -41,14 +42,15 @@ signals:
     void progressChanged(int progress, int max);
     
 public slots:
+    void cancel();
 
 private:
     QString m_path;
     QStringList findMediaFiles(const QString& directory);
     QStringList supportedExtensions;
     QSqlDatabase database;
+    std::atomic_bool m_cancelRequested{false};
 
-    
 };
 
 #endif // BMDBUPDATETHREAD_H
