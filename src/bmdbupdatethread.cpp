@@ -22,6 +22,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QSqlQuery>
+#include "dbmanager.h"
 #include <QFileInfo>
 #include <QApplication>
 #include "tagreader.h"
@@ -78,49 +79,47 @@ QStringList BmDbUpdateThread::findMediaFiles(const QString& directory)
 
 void BmDbUpdateThread::run()
 {
-    database.open();
-    qInfo() << database.lastError();
+    QSqlDatabase db = DbManager::instance().connection();
     TagReader reader;
     emit progressChanged(0, 0);
     emit progressMessage("Getting list of files in " + m_path);
     emit stateChanged("Finding media files...");
     QStringList files = findMediaFiles(m_path);
     emit progressMessage("Found " + QString::number(files.size()) + " files.");
-    QSqlQuery query(database);
+    QSqlQuery begin(db);
+    begin.prepare("BEGIN TRANSACTION");
+    DbManager::instance().exec(begin);
+    QSqlQuery query(db);
     emit stateChanged("Getting metadata and adding songs to the database");
     emit progressMessage("Getting metadata and adding songs to the database");
-    qInfo() << "Setting sqlite synchronous mode to OFF";
-    query.exec("PRAGMA synchronous=OFF");
-    qInfo() << query.lastError();
-    qInfo() << "Increasing sqlite cache size";
-    query.exec("PRAGMA cache_size=500000");
-    qInfo() << query.lastError();
-    query.exec("PRAGMA temp_store=2");
-    qInfo() << "Beginning transaction";
-    query.exec("BEGIN TRANSACTION");
-    qInfo() << query.lastError();
     query.prepare("INSERT OR IGNORE INTO bmsongs (artist,title,path,filename,duration,searchstring) VALUES(:artist, :title, :path, :filename, :duration, :searchstring)");
-    for (int i=0; i < files.size(); i++)
-    {
+    QVariantList artists, titles, paths, filenames, durations, searchstrings;
+    for (int i = 0; i < files.size(); i++) {
         QFileInfo fi(files.at(i));
         emit progressMessage("Processing file: " + fi.fileName());
         reader.setMedia(files.at(i));
         QString duration = QString::number(reader.getDuration() / 1000);
         QString artist = reader.getArtist();
         QString title = reader.getTitle();
-        query.bindValue(":artist", artist);
-        query.bindValue(":title", title);
-        query.bindValue(":path", files.at(i));
-        query.bindValue(":filename", files.at(i));
-        query.bindValue(":duration", duration);
-        query.bindValue(":searchstring", artist + title + files.at(i));
-        query.exec();
+        artists << artist;
+        titles << title;
+        paths << files.at(i);
+        filenames << files.at(i);
+        durations << duration;
+        searchstrings << artist + title + files.at(i);
         emit progressChanged(i + 1, files.size());
     }
-    query.exec("COMMIT TRANSACTION");
-    qInfo() << query.lastError();
+    query.bindValue(":artist", artists);
+    query.bindValue(":title", titles);
+    query.bindValue(":path", paths);
+    query.bindValue(":filename", filenames);
+    query.bindValue(":duration", durations);
+    query.bindValue(":searchstring", searchstrings);
+    DbManager::instance().execBatch(query);
+    QSqlQuery commit(db);
+    commit.prepare("COMMIT");
+    DbManager::instance().exec(commit);
     emit progressMessage("Finished processing files for directory: " + m_path);
-    database.close();
 }
 
 void BmDbUpdateThread::startUnthreaded()
@@ -131,22 +130,16 @@ void BmDbUpdateThread::startUnthreaded()
     emit stateChanged("Finding media files...");
     QStringList files = findMediaFiles(m_path);
     emit progressMessage("Found " + QString::number(files.size()) + " files.");
-    QSqlQuery query;
+    QSqlDatabase db = DbManager::instance().connection();
+    QSqlQuery begin(db);
+    begin.prepare("BEGIN TRANSACTION");
+    DbManager::instance().exec(begin);
+    QSqlQuery query(db);
     emit stateChanged("Getting metadata and adding songs to the database");
     emit progressMessage("Getting metadata and adding songs to the database");
-    qInfo() << "Setting sqlite synchronous mode to OFF";
-    query.exec("PRAGMA synchronous=OFF");
-    qInfo() << query.lastError();
-    qInfo() << "Increasing sqlite cache size";
-    query.exec("PRAGMA cache_size=500000");
-    qInfo() << query.lastError();
-    query.exec("PRAGMA temp_store=2");
-    qInfo() << "Beginning transaction";
-    database.transaction();
-    qInfo() << query.lastError();
     query.prepare("INSERT OR IGNORE INTO bmsongs (artist,title,path,filename,duration,searchstring) VALUES(:artist, :title, :path, :filename, :duration, :searchstring)");
-    for (int i=0; i < files.size(); i++)
-    {
+    QVariantList artists, titles, paths, filenames, durations, searchstrings;
+    for (int i = 0; i < files.size(); i++) {
         QApplication::processEvents();
         QFileInfo fi(files.at(i));
         emit progressMessage("Processing file: " + fi.fileName());
@@ -154,16 +147,23 @@ void BmDbUpdateThread::startUnthreaded()
         QString duration = QString::number(reader.getDuration() / 1000);
         QString artist = reader.getArtist();
         QString title = reader.getTitle();
-        query.bindValue(":artist", artist);
-        query.bindValue(":title", title);
-        query.bindValue(":path", files.at(i));
-        query.bindValue(":filename", files.at(i));
-        query.bindValue(":duration", duration);
-        query.bindValue(":searchstring", artist + title + files.at(i));
-        query.exec();
+        artists << artist;
+        titles << title;
+        paths << files.at(i);
+        filenames << files.at(i);
+        durations << duration;
+        searchstrings << artist + title + files.at(i);
         emit progressChanged(i + 1, files.size());
     }
-    database.commit();
-    qInfo() << query.lastError();
+    query.bindValue(":artist", artists);
+    query.bindValue(":title", titles);
+    query.bindValue(":path", paths);
+    query.bindValue(":filename", filenames);
+    query.bindValue(":duration", durations);
+    query.bindValue(":searchstring", searchstrings);
+    DbManager::instance().execBatch(query);
+    QSqlQuery commit(db);
+    commit.prepare("COMMIT");
+    DbManager::instance().exec(commit);
     emit progressMessage("Finished processing files for directory: " + m_path);
 }

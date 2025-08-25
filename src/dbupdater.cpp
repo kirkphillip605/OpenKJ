@@ -22,6 +22,7 @@
 #include "dbupdater.h"
 #include <array>
 #include <QSqlQuery>
+#include "dbmanager.h"
 #include <QFileInfo>
 #include <QDir>
 #include <QDirIterator>
@@ -138,13 +139,13 @@ void DbUpdater::addFilesToDatabase(const QList<QString> &files)
     if (files.empty())
         return;
 
-    emit stateChanged("Adding new files to database...")    ;
+    emit stateChanged("Adding new files to database...");
 
-    QSqlQuery query;
-    query.exec("PRAGMA synchronous=OFF");
-    query.exec("PRAGMA cache_size=500000");
-    query.exec("PRAGMA temp_store=2");
-    query.exec("BEGIN TRANSACTION");
+    QSqlDatabase db = DbManager::instance().connection();
+    QSqlQuery begin(db);
+    begin.prepare("BEGIN TRANSACTION");
+    DbManager::instance().exec(begin);
+    QSqlQuery query(db);
     query.prepare(SQL(
             INSERT INTO dbSongs (discid, artist, title, path, filename, duration, searchstring)
             VALUES(:discid, :artist, :title, :path, :filename, :duration, :searchstring)
@@ -162,6 +163,7 @@ void DbUpdater::addFilesToDatabase(const QList<QString> &files)
     QFileInfo fileInfo;
     int loops = 0;
 
+    QVariantList discids, artists, titles, paths, filenames, durations, searchstrings;
     for (const auto &filePath : files) {
         loops++;
         int duration{-2};
@@ -187,24 +189,29 @@ void DbUpdater::addFilesToDatabase(const QList<QString> &files)
                 continue;
             }
         }
-        query.bindValue(":discid", parser.getSongId());
-        query.bindValue(":artist", parser.getArtist());
-        // If metadata parse wasn't successful, just put the filename in the title field
-        query.bindValue(":title", (parser.parsedSuccessfully()) ? parser.getTitle() : fileInfo.completeBaseName());
-        query.bindValue(":path", filePath);
-        query.bindValue(":filename", fileInfo.completeBaseName());
-        query.bindValue(":duration", duration);
-        // searchString contains the metadata plus the basename to work around people's libraries that are
-        // misnamed and don't import properly or who use media tags and have bad tags.
-        query.bindValue(":searchstring", fileInfo.completeBaseName() + " " + parser.getArtist() + " " + parser.getTitle() + " " + parser.getSongId());
-        query.exec();
+        discids << parser.getSongId();
+        artists << parser.getArtist();
+        titles << ((parser.parsedSuccessfully()) ? parser.getTitle() : fileInfo.completeBaseName());
+        paths << filePath;
+        filenames << fileInfo.completeBaseName();
+        durations << duration;
+        searchstrings << fileInfo.completeBaseName() + " " + parser.getArtist() + " " + parser.getTitle() + " " + parser.getSongId();
         if (shouldUpdateGui()) {
             emit progressChanged(loops, files.length());
-            //emit stateChanged(QString("Importing new files into the karaoke database... %1 of %2").arg(loops).arg(files.length()));
             QApplication::processEvents();
         }
     }
-    query.exec("COMMIT");
+    query.bindValue(":discid", discids);
+    query.bindValue(":artist", artists);
+    query.bindValue(":title", titles);
+    query.bindValue(":path", paths);
+    query.bindValue(":filename", filenames);
+    query.bindValue(":duration", durations);
+    query.bindValue(":searchstring", searchstrings);
+    DbManager::instance().execBatch(query);
+    QSqlQuery commit(db);
+    commit.prepare("COMMIT");
+    DbManager::instance().exec(commit);
 
     emit progressMessage("Done processing new files.");
 

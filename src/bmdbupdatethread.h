@@ -46,7 +46,6 @@ private:
     QString m_path;
     QStringList findMediaFiles(const QString& directory);
     QStringList supportedExtensions;
-    QSqlDatabase database;
 
     
 };
