@@ -5,6 +5,9 @@
 #include <QJsonObject>
 #include <QNetworkReply>
 #include <QSysInfo>
+#include "logging.h"
+#include "error.h"
+#include "result.h"
 
 
 QString UpdateChecker::getOS() const
@@ -57,7 +60,7 @@ void UpdateChecker::checkForUpdates()
 {
     if (!m_settings.checkUpdates())
         return;
-    qInfo() << "Requesting current version info for branch: " << channel;
+    qCInfo(netLog) << "Requesting current version info for branch:" << channel;
     connect(manager, &QNetworkAccessManager::finished, this, &UpdateChecker::onNetworkReply);
     [[maybe_unused]]QNetworkReply *reply = manager->get(QNetworkRequest(QUrl("http://openkj.org/downloads/" + OS + "-" + channel + "-curversion.txt")));
 //    while (!reply->isFinished())
@@ -65,22 +68,28 @@ void UpdateChecker::checkForUpdates()
 //    qInfo() << "Request completed";
 }
 
+static okj::Result<QString> parseVersionReply(QNetworkReply *reply) {
+    if (reply->error() != QNetworkReply::NoError) {
+        return okj::Result<QString>::err(okj::Error::fromNetworkError(reply->error(), reply->errorString()));
+    }
+    QString version = QString(reply->readAll()).trimmed();
+    return okj::Result<QString>::ok(version);
+}
+
 void UpdateChecker::onNetworkReply(QNetworkReply *reply)
 {
-    qInfo() << "Received network reply";
-    if (reply->error() != QNetworkReply::NoError)
-    {
-        qInfo() << reply->errorString();
-        //output some meaningful error msg
+    qCInfo(netLog) << "Received network reply";
+    auto result = parseVersionReply(reply);
+    if (!result.has_value()) {
+        qCWarning(netLog) << result.error().message;
         return;
     }
-    availVersion = QString(reply->readAll());
-    availVersion = availVersion.trimmed();
+    availVersion = result.value();
     QStringList curVersionParts = currentVer.split(".");
     QStringList availVersionParts = availVersion.split(".");
     if (availVersionParts.size() != 3 || curVersionParts.size() != 3)
     {
-        qInfo() << "Got invalid version info from server";
+        qCWarning(netLog) << "Got invalid version info from server";
         return;
     }
     int availMajor = availVersionParts.at(0).toInt();
@@ -95,7 +104,7 @@ void UpdateChecker::onNetworkReply(QNetworkReply *reply)
         emit newVersionAvailable(availVersion);
     else if (availMajor == curMajor && availMinor == curMinor && availRevis > curRevis)
         emit newVersionAvailable(availVersion);
-    qInfo() << "Received version: " << availVersion << " Current version: " << currentVer;
+    qCInfo(netLog) << "Received version:" << availVersion << "Current version:" << currentVer;
     reply->deleteLater();
     disconnect(manager, &QNetworkAccessManager::finished, this, &UpdateChecker::onNetworkReply);
 
@@ -117,7 +126,7 @@ void UpdateChecker::onNetworkReply(QNetworkReply *reply)
 
 void UpdateChecker::aOnNetworkReply(QNetworkReply *reply)
 {
-    qInfo() << reply->readAll();
+    qCInfo(netLog) << reply->readAll();
     reply->deleteLater();
 }
 

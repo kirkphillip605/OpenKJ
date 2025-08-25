@@ -458,6 +458,7 @@ set(SOURCE_FILES
         src/dlgaddsinger.cpp
         src/songshop.cpp
         src/dlgsongshop.cpp
+        src/logging.cpp
         src/simplecrypt.cpp
         src/dlgsongshoppurchase.cpp
         src/dlgsetpassword.cpp
