@@ -276,7 +276,7 @@ jobs:
 
     - name: Upload installer artifact
       id: upload_artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: Win${{ matrix.bits }} installer
         path: installer/${{ env.branch }}/${{ env.installer_fn }}
