@@ -3,9 +3,15 @@
     <id>org.openkj.OpenKJ</id>
     <name>OpenKJ</name>
     <summary>Professional karaoke hosting software</summary>
-    <developer_name>T. Isaac Lightburn</developer_name>
-    <content_rating type="oars-1.1"/>
+    <developer id="org.openkj">
+        <name>T. Isaac Lightburn</name>
+    </developer>
+    <content_rating type="oars-1.1">
+        <content_attribute id="money-purchasing">intense</content_attribute>
+    </content_rating>
     <url type="homepage">https://openkj.org</url>
+    <url type="bugtracker">https://github.com/OpenKJ/OpenKJ/issues</url>
+    <url type="vcs-browser">https://github.com/OpenKJ/OpenKJ</url>
     <metadata_license>FSFAP</metadata_license>
     <project_license>GPL-3.0-or-later</project_license>
 
