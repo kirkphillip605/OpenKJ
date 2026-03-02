@@ -22,7 +22,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QMessageBox>
-#include <QDesktopWidget>
+// (QDesktopWidget removed — no longer used; use QGuiApplication::screens() instead)
 #include <QMenu>
 #include <QInputDialog>
 #include <QFileDialog>

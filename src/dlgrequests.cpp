@@ -25,7 +25,6 @@
 #include <QMessageBox>
 #include "settings.h"
 #include "okjsongbookapi.h"
-#include <QProgressDialog>
 #include "src/models/tableviewtooltipfilter.h"
 #include "dlgvideopreview.h"
 
@@ -38,11 +37,7 @@ QString toMixedCase(const QString& s)
         return QString();
     if (s.size() < 1)
         return QString();
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    QStringList parts = s.split(" ", QString::SkipEmptyParts);
-#else
     QStringList parts = s.split(' ', Qt::SkipEmptyParts);
-#endif
     for (int i=1; i<parts.size(); ++i)
         parts[i].replace(0, 1, parts[i][0].toUpper());
     QString newStr = parts.join(" ");
@@ -88,6 +83,8 @@ DlgRequests::DlgRequests(TableModelRotation *rotationModel, QWidget *parent) :
     ui->tableViewSearch->horizontalHeader()->resizeSection(4,75);
     ui->checkBoxDelOnAdd->setChecked(settings.requestRemoveOnRotAdd());
     connect(songbookApi, SIGNAL(venuesChanged(OkjsVenues)), this, SLOT(venuesChanged(OkjsVenues)));
+    connect(songbookApi, &OKJSongbookAPI::remoteSongDbUpdateDone,
+            this,        &DlgRequests::onRemoteSongDbUpdateDone);
     connect(ui->lineEditSearch, SIGNAL(escapePressed()), this, SLOT(lineEditSearchEscapePressed()));
     connect(ui->checkBoxDelOnAdd, SIGNAL(clicked(bool)), &settings, SLOT(setRequestRemoveOnRotAdd(bool)));
     ui->cbxAutoShowRequestsDlg->setChecked(settings.requestDialogAutoShow());
@@ -418,37 +415,44 @@ void DlgRequests::on_pushButtonUpdateDb_clicked()
     ui->pushButtonUpdateDb->setEnabled(false);
     QMessageBox msgBox;
     msgBox.setText(tr("Are you sure?\n\nThis operation can take serveral minutes depending on the size of your song database and the speed of your internet connection.\n"));
-//    msgBox.setInformativeText(tr("This operation can take serveral minutes depending on the size of your song database and the speed of your internet connection."));
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);
     msgBox.setDefaultButton(QMessageBox::Cancel);
     int ret = msgBox.exec();
     if (ret == QMessageBox::Yes)
     {
         qInfo() << "Opening progress dialog for remote db update";
-        QProgressDialog *progressDialog = new QProgressDialog(this);
-//        progressDialog->setCancelButton(0);
-        progressDialog->setMinimum(0);
-        progressDialog->setMaximum(20);
-        progressDialog->setValue(0);
-        progressDialog->setLabelText(tr("Updating request server song database"));
-        progressDialog->show();
-        QApplication::processEvents();
-        connect(songbookApi, SIGNAL(remoteSongDbUpdateNumDocs(int)), progressDialog, SLOT(setMaximum(int)));
-        connect(songbookApi, SIGNAL(remoteSongDbUpdateProgress(int)), progressDialog, SLOT(setValue(int)));
-        connect(progressDialog, SIGNAL(canceled()), songbookApi, SLOT(dbUpdateCanceled()));
-        //    progressDialog->show();
+        m_dbUpdateProgressDialog = new QProgressDialog(this);
+        m_dbUpdateProgressDialog->setMinimum(0);
+        m_dbUpdateProgressDialog->setMaximum(20);
+        m_dbUpdateProgressDialog->setValue(0);
+        m_dbUpdateProgressDialog->setLabelText(tr("Updating request server song database"));
+        m_dbUpdateProgressDialog->show();
+        connect(songbookApi, SIGNAL(remoteSongDbUpdateNumDocs(int)), m_dbUpdateProgressDialog, SLOT(setMaximum(int)));
+        connect(songbookApi, SIGNAL(remoteSongDbUpdateProgress(int)), m_dbUpdateProgressDialog, SLOT(setValue(int)));
+        connect(m_dbUpdateProgressDialog, SIGNAL(canceled()), songbookApi, SLOT(dbUpdateCanceled()));
         songbookApi->updateSongDb();
-        if (songbookApi->updateWasCancelled())
-            qInfo() << "Songbook DB update cancelled by user";
-        else
-        {
-            QMessageBox msgBox;
-            msgBox.setText(tr("Remote database update completed!"));
-            msgBox.exec();
-        }
-        qInfo() << "Closing progress dialog for remote db update";
-        progressDialog->close();
-        progressDialog->deleteLater();
+        // Completion is handled asynchronously in onRemoteSongDbUpdateDone()
+    }
+    else
+    {
+        ui->pushButtonUpdateDb->setEnabled(true);
+    }
+}
+
+void DlgRequests::onRemoteSongDbUpdateDone()
+{
+    qInfo() << "Remote song DB update completed";
+    if (m_dbUpdateProgressDialog)
+    {
+        m_dbUpdateProgressDialog->close();
+        m_dbUpdateProgressDialog->deleteLater();
+        m_dbUpdateProgressDialog = nullptr;
+    }
+    if (!songbookApi->updateWasCancelled())
+    {
+        QMessageBox msgBox;
+        msgBox.setText(tr("Remote database update completed!"));
+        msgBox.exec();
     }
     ui->pushButtonUpdateDb->setEnabled(true);
 }

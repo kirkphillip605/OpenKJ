@@ -28,6 +28,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPushButton>
+#include <QScreen>
 #include "settings.h"
 #include <QTimer>
 #include "mediabackend.h"
@@ -47,13 +48,12 @@ public:
     QHBoxLayout *layout = new QHBoxLayout(this);
     setLayout(layout);
 
-    layout->setMargin(0);
-    layout->setSpacing(0);
     layout->setContentsMargins(0,0,0,0);
+    layout->setSpacing(0);
     setContentsMargins(0,0,0,0);
     label = new QLabel(this);
     layout->addWidget(label);
-    label->setMargin(0);
+    // label->setMargin(0) removed — QLabel::setMargin() is deprecated since Qt 5.x.
     label->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     label->setText("00:00");
     label->setAutoFillBackground(true);
@@ -110,6 +110,7 @@ private:
     MediaBackend *m_kmb;
     MediaBackend *m_bmb;
     TransparentWidget *tWidget;
+    bool m_hiddenByScreenRemoval{false};
 
 public:
     explicit DlgCdg(MediaBackend *KaraokeBackend, MediaBackend *BreakBackend, QWidget *parent = nullptr, Qt::WindowFlags f = QFlags<Qt::WindowType>());
@@ -145,6 +146,8 @@ private slots:
     void alertBgColorChanged(const QColor &color);
     void alertTxtColorChanged(const QColor &color);
     void cdgRemainEnabledChanged(bool enabled);
+    void handleScreenRemoved(QScreen *screen);
+    void handleScreenAdded(QScreen *screen);
 
 public slots:
     void showAlert(bool show);

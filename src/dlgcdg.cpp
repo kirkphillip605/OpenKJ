@@ -20,7 +20,7 @@
 
 #include "dlgcdg.h"
 #include "ui_dlgcdg.h"
-#include <QDesktopWidget>
+#include <QGuiApplication>
 #include <QSvgRenderer>
 #include <QPainter>
 #include <QDir>
@@ -112,6 +112,11 @@ DlgCdg::DlgCdg(MediaBackend *KaraokeBackend, MediaBackend *BreakBackend, QWidget
     m_timer1s.start(1000);
     m_timerSlideShow.start((int)settings.slideShowInterval() * 1000);
     ui->videoDisplayBm->hide();
+
+    // Gracefully handle external display connect/disconnect events.
+    connect(qGuiApp, &QGuiApplication::screenRemoved, this, &DlgCdg::handleScreenRemoved);
+    connect(qGuiApp, &QGuiApplication::screenAdded,   this, &DlgCdg::handleScreenAdded);
+
     if (!settings.showCdgWindow())
         hide();
     else
@@ -214,8 +219,8 @@ void DlgCdg::mouseDoubleClickEvent([[maybe_unused]]QMouseEvent *e)
     cdgOffsetsChanged();
     settings.setCdgWindowFullscreen(m_fullScreen);
     settings.saveWindowState(this);
-    QDesktopWidget widget;
-    settings.setCdgWindowFullscreenMonitor(widget.screenNumber(this));
+    settings.setCdgWindowFullscreenMonitor(
+        QGuiApplication::screens().indexOf(this->screen()));
 }
 
 QFileInfoList DlgCdg::getSlideShowImages()
@@ -402,8 +407,8 @@ void DlgCdg::on_btnToggleFullscreen_clicked()
         showNormal();
     settings.setCdgWindowFullscreen(m_fullScreen);
     settings.saveWindowState(this);
-    QDesktopWidget widget;
-    settings.setCdgWindowFullscreenMonitor(widget.screenNumber(this));
+    settings.setCdgWindowFullscreenMonitor(
+        QGuiApplication::screens().indexOf(this->screen()));
     cdgOffsetsChanged();
 }
 
@@ -448,6 +453,31 @@ void DlgCdg::hideEvent(QHideEvent *event)
     settings.saveWindowState(this);
     //settings.saveWindowState(tWidget);
     QWidget::hideEvent(event);
+}
+
+void DlgCdg::handleScreenRemoved(QScreen *screen)
+{
+    // If this window is visible and fullscreen on the removed screen, hide it
+    // gracefully so the main UI is not disrupted.
+    if (isVisible() && m_fullScreen && this->screen() == screen)
+    {
+        qInfo() << "DlgCdg: display removed while CDG window was fullscreen — hiding gracefully";
+        m_hiddenByScreenRemoval = true;
+        hide();
+    }
+}
+
+void DlgCdg::handleScreenAdded(QScreen *screen)
+{
+    Q_UNUSED(screen)
+    // If the window was hidden because its screen was removed, restore it now
+    // that a new screen has appeared.
+    if (m_hiddenByScreenRemoval)
+    {
+        qInfo() << "DlgCdg: new display detected — restoring CDG window";
+        m_hiddenByScreenRemoval = false;
+        show();
+    }
 }
 
 

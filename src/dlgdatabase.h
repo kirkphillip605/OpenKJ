@@ -28,7 +28,7 @@
 #include "dlgcustompatterns.h"
 #include <QSqlDatabase>
 #include "dlgdbupdate.h"
-#include <QFileSystemWatcher>
+#include "directorymonitor.h"
 
 namespace Ui {
 class DlgDatabase;
@@ -45,7 +45,7 @@ private:
     DlgDbUpdate *dbUpdateDlg;
     int selectedRow;
     QSqlDatabase db;
-    QFileSystemWatcher fsWatcher;
+    DirectoryMonitor *m_dirMonitor{nullptr};
 
 public:
     explicit DlgDatabase(QSqlDatabase db, QWidget *parent = 0);
@@ -73,7 +73,6 @@ private slots:
     void showDbUpdateErrors(QStringList errors);
     void on_btnCustomPatterns_clicked();
     void on_btnExport_clicked();
-    void directoryChanged(QString dirPath);
 };
 
 #endif // DATABASEDIALOG_H

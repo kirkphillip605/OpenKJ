@@ -23,6 +23,7 @@
 
 #include <QDialog>
 #include <QItemSelection>
+#include <QProgressDialog>
 #include "src/models/tablemodelrequests.h"
 #include "src/models/tablemodelkaraokesongs.h"
 #include "src/models/tablemodelrotation.h"
@@ -46,6 +47,7 @@ private:
     int curRequestId;
     QString curSelReqSinger;
     QTimer testTimer;
+    QProgressDialog *m_dbUpdateProgressDialog{nullptr};
 
 public:
     explicit DlgRequests(TableModelRotation *rotationModel, QWidget *parent = 0);
@@ -86,6 +88,7 @@ private slots:
     void on_lineEditSearch_textChanged(const QString &arg1);
     void lineEditSearchEscapePressed();
     void autoSizeViews();
+    void onRemoteSongDbUpdateDone();
 
     // QWidget interface
     void on_spinBoxKey_valueChanged(int arg1);

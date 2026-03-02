@@ -28,6 +28,7 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QCommandLineParser>
+#include <QMutex>
 #include "settings.h"
 #include "idledetect.h"
 #include "runguard/runguard.h"
@@ -59,6 +60,8 @@ auto startTime = std::chrono::high_resolution_clock::now();
 
 void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
+    static QMutex mutex;
+    QMutexLocker locker(&mutex);
     bool loggingEnabled = settings.logEnabled();
     auto currentTime = std::chrono::high_resolution_clock::now();
     unsigned int elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count();
@@ -148,7 +151,7 @@ int main(int argc, char *argv[])
     qputenv("GTK_PATH", QString(appDir + "Frameworks/GStreamer.framework/Versions/Current/").toLocal8Bit());
     qputenv("GIO_EXTRA_MODULES", QString(appDir + "Frameworks/GStreamer.framework/Versions/Current/lib/gio/modules").toLocal8Bit());
     qWarning() << "MacOS detected, changed GST env vars to point to the bundled framework";
-    qWarning() << qgetenv("GST_PLUGIN_SYSTEM_PATH") << endl << qgetenv("GST_PLUGIN_SCANNER") << endl << qgetenv("GTK_PATH") << endl << qgetenv("GIO_EXTRA_MODULES") << endl;
+    qWarning() << qgetenv("GST_PLUGIN_SYSTEM_PATH") << Qt::endl << qgetenv("GST_PLUGIN_SCANNER") << Qt::endl << qgetenv("GTK_PATH") << Qt::endl << qgetenv("GIO_EXTRA_MODULES") << Qt::endl;
 #endif
 
     filter = new IdleDetect;
