@@ -237,7 +237,7 @@ int TableModelQueueSongs::add(const int songId)
     query.bindValue(":position", (int)m_songs.size());
     query.exec();
     auto queueSongId = query.lastInsertId().toInt();
-    emit layoutAboutToBeChanged();
+    beginInsertRows(QModelIndex(), (int)m_songs.size(), (int)m_songs.size());
     m_songs.emplace_back(QueueSong{
                              queueSongId,
                              m_curSingerId,
@@ -251,7 +251,7 @@ int TableModelQueueSongs::add(const int songId)
                              ksong.duration,
                              ksong.path
                          });
-    emit layoutChanged();
+    endInsertRows();
     emit queueModified(m_curSingerId);
     return queueSongId;
 }
@@ -265,16 +265,19 @@ void TableModelQueueSongs::insert(const int songId, const int position)
 void TableModelQueueSongs::remove(const int songId)
 {
     qInfo() << "songs before delete: " << m_songs.size();
-    emit layoutAboutToBeChanged();
-    auto it = std::remove_if(m_songs.begin(), m_songs.end(), [&songId] (QueueSong &song) {
+    auto it = std::find_if(m_songs.begin(), m_songs.end(), [&songId] (QueueSong &song) {
        return (song.id == songId);
     });
-    m_songs.erase(it, m_songs.end());
+    if (it == m_songs.end())
+        return;
+    int row = (int)std::distance(m_songs.begin(), it);
+    beginRemoveRows(QModelIndex(), row, row);
+    m_songs.erase(it);
     int pos{0};
     std::for_each(m_songs.begin(), m_songs.end(), [&pos] (QueueSong &song) {
        song.position = pos++;
     });
-    emit layoutChanged();
+    endRemoveRows();
     qInfo() << "songs after delete" << m_songs.size();
     commitChanges();
     emit queueModified(m_curSingerId);
@@ -317,14 +320,16 @@ void TableModelQueueSongs::setPlayed(const int songId, const bool played) {
 
 void TableModelQueueSongs::removeAll()
 {
-    emit layoutAboutToBeChanged();
     QSqlQuery query;
     query.prepare("DELETE FROM queuesongs WHERE singer = :singerId");
     query.bindValue(":singerId", m_curSingerId);
     query.exec();
-    m_songs.clear();
-    m_songs.shrink_to_fit();
-    emit layoutChanged();
+    if (!m_songs.empty()) {
+        beginRemoveRows(QModelIndex(), 0, (int)m_songs.size() - 1);
+        m_songs.clear();
+        m_songs.shrink_to_fit();
+        endRemoveRows();
+    }
     emit queueModified(m_curSingerId);
 }
 

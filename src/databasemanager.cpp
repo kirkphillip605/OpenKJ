@@ -114,9 +114,10 @@ QSqlDatabase DatabaseManager::initDatabase(const QDir &dataDir,
             while (singersQuery.next()) {
                 qInfo() << "Running import for singer: " << singersQuery.value("name");
                 QSqlQuery songsQuery;
-                songsQuery.exec(
-                        "SELECT dbsongs.artist,dbsongs.title,dbsongs.discid,regularsongs.keychg,dbsongs.path FROM regularsongs,dbsongs WHERE dbsongs.songid == regularsongs.songid AND regularsongs.regsingerid == " +
-                        singersQuery.value("regsingerid").toString() + " ORDER BY regularsongs.position");
+                songsQuery.prepare(
+                        "SELECT dbsongs.artist,dbsongs.title,dbsongs.discid,regularsongs.keychg,dbsongs.path FROM regularsongs,dbsongs WHERE dbsongs.songid == regularsongs.songid AND regularsongs.regsingerid == :regsingerid ORDER BY regularsongs.position");
+                songsQuery.bindValue(":regsingerid", singersQuery.value("regsingerid").toInt());
+                songsQuery.exec();
                 while (songsQuery.next()) {
                     qInfo() << "Importing song: " << songsQuery.value(4).toString();
                     songImportCb(

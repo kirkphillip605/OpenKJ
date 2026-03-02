@@ -163,7 +163,7 @@ MediaBackend::~MediaBackend()
     delete m_cdgSrc;
     for (auto &device : m_audioOutputDevices)
     {
-       if (device.index != m_outputDevice.index)
+       if (device.gstDevice != nullptr)
             g_object_unref(device.gstDevice);
     }
 

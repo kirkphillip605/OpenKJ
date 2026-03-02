@@ -75,16 +75,20 @@ void TagReader::setMedia(QString path)
         const GstTagList *tags = gst_discoverer_info_get_tags(discovererInfo);
         if (GST_IS_TAG_LIST(tags))
         {
-            gchar *tagVal;
+            gchar *tagVal = nullptr;
             if (gst_tag_list_get_string(tags,"artist",&tagVal))
             {
                 m_artist = tagVal;
                 qInfo() << "Got artist tag: " << m_artist;
+                g_free(tagVal);
+                tagVal = nullptr;
             }
             if (gst_tag_list_get_string(tags,"title",&tagVal))
             {
                 m_title = tagVal;
                 qInfo() << "Got title tag: " << m_title;
+                g_free(tagVal);
+                tagVal = nullptr;
             }
         }
         else
