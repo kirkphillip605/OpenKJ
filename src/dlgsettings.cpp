@@ -169,6 +169,10 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
     ui->cbxTheme->addItem("Fusion Dark");
     ui->cbxTheme->addItem("Fusion Light");
     ui->cbxTheme->setCurrentIndex(settings.theme());
+    ui->comboBoxAppTheme->addItem("Default");
+    ui->comboBoxAppTheme->addItem("Modern");
+    ui->comboBoxAppTheme->setCurrentIndex(settings.appTheme());
+    ui->checkBoxTouchFriendly->setChecked(settings.touchFriendlyEnabled());
     ui->lineEditOutputDir->setText(settings.recordingOutputDir());
     tickerShowRotationInfoChanged(settings.tickerShowRotationInfo());
     ui->groupBoxTicker->setChecked(settings.tickerEnabled());
@@ -198,29 +202,26 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
     ui->checkBoxTreatAllSingersAsRegs->setChecked(settings.treatAllSingersAsRegs());
     ui->cbxCrossFade->setChecked(settings.bmKCrossFade());
     adjustSize();
-    connect(ui->spinBoxCdgOffsetTop, SIGNAL(valueChanged(int)), &settings, SLOT(setCdgOffsetTop(int)));
-    connect(ui->spinBoxCdgOffsetBottom, SIGNAL(valueChanged(int)), &settings, SLOT(setCdgOffsetBottom(int)));
-    connect(ui->spinBoxCdgOffsetLeft, SIGNAL(valueChanged(int)), &settings, SLOT(setCdgOffsetLeft(int)));
-    connect(ui->spinBoxCdgOffsetRight, SIGNAL(valueChanged(int)), &settings, SLOT(setCdgOffsetRight(int)));
-    connect(ui->spinBoxVideoOffset, SIGNAL(valueChanged(int)), &settings, SLOT(setVideoOffsetMs(int)));
-    connect(ui->spinBoxSlideshowInterval, SIGNAL(valueChanged(int)), &settings, SLOT(setSlideShowInterval(int)));
-    connect(&settings, SIGNAL(karaokeAutoAdvanceChanged(bool)), ui->checkBoxKAA, SLOT(setChecked(bool)));
-    connect(&settings, SIGNAL(showQueueRemovalWarningChanged(bool)), ui->cbxQueueRemovalWarning,
-            SLOT(setChecked(bool)));
-    connect(&settings, SIGNAL(showSingerRemovalWarningChanged(bool)), ui->cbxSingerRemovalWarning,
-            SLOT(setChecked(bool)));
-    connect(&settings, SIGNAL(showSongInterruptionWarningChanged(bool)), ui->cbxSongInterruptionWarning,
-            SLOT(setChecked(bool)));
-    connect(&settings, SIGNAL(showSongStopPauseWarningChanged(bool)), ui->cbxStopPauseWarning, SLOT(setChecked(bool)));
-    connect(ui->cbxIgnoreApos, SIGNAL(toggled(bool)), &settings, SLOT(setIgnoreAposInSearch(bool)));
-    connect(ui->cbxCrossFade, SIGNAL(clicked(bool)), &settings, SLOT(setBmKCrossfade(bool)));
-    connect(ui->cbxCheckUpdates, SIGNAL(clicked(bool)), &settings, SLOT(setCheckUpdates(bool)));
-    connect(ui->comboBoxUpdateBranch, SIGNAL(currentIndexChanged(int)), &settings, SLOT(setUpdatesBranch(int)));
-    connect(ui->checkBoxDbSkipValidation, SIGNAL(toggled(bool)), &settings, SLOT(dbSetSkipValidation(bool)));
-    connect(ui->checkBoxLazyLoadDurations, SIGNAL(toggled(bool)), &settings, SLOT(dbSetLazyLoadDurations(bool)));
-    connect(ui->checkBoxMonitorDirs, SIGNAL(toggled(bool)), &settings, SLOT(dbSetDirectoryWatchEnabled(bool)));
-    connect(ui->spinBoxSystemId, SIGNAL(valueChanged(int)), &settings, SLOT(setSystemId(int)));
-    connect(ui->checkBoxLogging, SIGNAL(toggled(bool)), &settings, SLOT(setLogEnabled(bool)));
+    connect(ui->spinBoxCdgOffsetTop, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setCdgOffsetTop);
+    connect(ui->spinBoxCdgOffsetBottom, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setCdgOffsetBottom);
+    connect(ui->spinBoxCdgOffsetLeft, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setCdgOffsetLeft);
+    connect(ui->spinBoxCdgOffsetRight, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setCdgOffsetRight);
+    connect(ui->spinBoxVideoOffset, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setVideoOffsetMs);
+    connect(ui->spinBoxSlideshowInterval, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setSlideShowInterval);
+    connect(&settings, &Settings::karaokeAutoAdvanceChanged, ui->checkBoxKAA, &QCheckBox::setChecked);
+    connect(&settings, &Settings::showQueueRemovalWarningChanged, ui->cbxQueueRemovalWarning, &QCheckBox::setChecked);
+    connect(&settings, &Settings::showSingerRemovalWarningChanged, ui->cbxSingerRemovalWarning, &QCheckBox::setChecked);
+    connect(&settings, &Settings::showSongInterruptionWarningChanged, ui->cbxSongInterruptionWarning, &QCheckBox::setChecked);
+    connect(&settings, &Settings::showSongStopPauseWarningChanged, ui->cbxStopPauseWarning, &QCheckBox::setChecked);
+    connect(ui->cbxIgnoreApos, &QCheckBox::toggled, &settings, &Settings::setIgnoreAposInSearch);
+    connect(ui->cbxCrossFade, &QCheckBox::clicked, &settings, &Settings::setBmKCrossfade);
+    connect(ui->cbxCheckUpdates, &QCheckBox::clicked, &settings, &Settings::setCheckUpdates);
+    connect(ui->comboBoxUpdateBranch, QOverload<int>::of(&QComboBox::currentIndexChanged), &settings, &Settings::setUpdatesBranch);
+    connect(ui->checkBoxDbSkipValidation, &QCheckBox::toggled, &settings, &Settings::dbSetSkipValidation);
+    connect(ui->checkBoxLazyLoadDurations, &QCheckBox::toggled, &settings, &Settings::dbSetLazyLoadDurations);
+    connect(ui->checkBoxMonitorDirs, &QCheckBox::toggled, &settings, &Settings::dbSetDirectoryWatchEnabled);
+    connect(ui->spinBoxSystemId, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setSystemId);
+    connect(ui->checkBoxLogging, &QCheckBox::toggled, &settings, &Settings::setLogEnabled);
     connect(ui->checkBoxTreatAllSingersAsRegs, &QAbstractButton::toggled, &settings,
             &Settings::setTreatAllSingersAsRegs);
     connect(ui->checkBoxShowAddDlgOnDbDblclk, &QCheckBox::stateChanged, [&](auto state) {
@@ -229,18 +230,17 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
         else
             settings.setDbDoubleClickAddsSong(true);
     });
-    connect(networkManager, SIGNAL(finished(QNetworkReply * )), this, SLOT(onNetworkReply(QNetworkReply * )));
-    connect(networkManager, SIGNAL(sslErrors(QNetworkReply * , QList<QSslError>)), this,
-            SLOT(onSslErrors(QNetworkReply * )));
-    connect(ui->cbxQueueRemovalWarning, SIGNAL(toggled(bool)), &settings, SLOT(setShowQueueRemovalWarning(bool)));
-    connect(ui->cbxSingerRemovalWarning, SIGNAL(toggled(bool)), &settings, SLOT(setShowSingerRemovalWarning(bool)));
-    connect(ui->cbxSongInterruptionWarning, SIGNAL(toggled(bool)), &settings,
-            SLOT(setShowSongInterruptionWarning(bool)));
-    connect(ui->cbxStopPauseWarning, SIGNAL(toggled(bool)), &settings, SLOT(setShowSongPauseStopWarning(bool)));
-    connect(ui->cbxTickerShowRotationInfo, SIGNAL(clicked(bool)), &settings, SLOT(setTickerShowRotationInfo(bool)));
-    connect(&settings, SIGNAL(tickerShowRotationInfoChanged(bool)), this, SLOT(tickerShowRotationInfoChanged(bool)));
-    connect(songbookApi, SIGNAL(entitledSystemCountChanged(int)), this, SLOT(entitledSystemCountChanged(int)));
-    connect(ui->cbxRotShowNextSong, SIGNAL(clicked(bool)), &settings, SLOT(setRotationShowNextSong(bool)));
+    connect(networkManager, &QNetworkAccessManager::finished, this, &DlgSettings::onNetworkReply);
+    connect(networkManager, &QNetworkAccessManager::sslErrors,
+            this, [this](QNetworkReply *reply, const QList<QSslError> &) { onSslErrors(reply); });
+    connect(ui->cbxQueueRemovalWarning, &QCheckBox::toggled, &settings, &Settings::setShowQueueRemovalWarning);
+    connect(ui->cbxSingerRemovalWarning, &QCheckBox::toggled, &settings, &Settings::setShowSingerRemovalWarning);
+    connect(ui->cbxSongInterruptionWarning, &QCheckBox::toggled, &settings, &Settings::setShowSongInterruptionWarning);
+    connect(ui->cbxStopPauseWarning, &QCheckBox::toggled, &settings, &Settings::setShowSongPauseStopWarning);
+    connect(ui->cbxTickerShowRotationInfo, &QCheckBox::clicked, &settings, &Settings::setTickerShowRotationInfo);
+    connect(&settings, &Settings::tickerShowRotationInfoChanged, this, &DlgSettings::tickerShowRotationInfoChanged);
+    connect(songbookApi, &OKJSongbookAPI::entitledSystemCountChanged, this, &DlgSettings::entitledSystemCountChanged);
+    connect(ui->cbxRotShowNextSong, &QCheckBox::clicked, &settings, &Settings::setRotationShowNextSong);
     setupHotkeysForm();
     m_pageSetupDone = true;
 }
@@ -673,6 +673,18 @@ void DlgSettings::on_cbxTheme_currentIndexChanged(int index) {
     settings.setTheme(index);
 }
 
+void DlgSettings::on_comboBoxAppTheme_currentIndexChanged(int index) {
+    if (!m_pageSetupDone)
+        return;
+    settings.setAppTheme(index);
+}
+
+void DlgSettings::on_checkBoxTouchFriendly_toggled(bool checked) {
+    if (!m_pageSetupDone)
+        return;
+    settings.setTouchFriendlyEnabled(checked);
+}
+
 void DlgSettings::on_btnBrowse_clicked() {
     QString fileName = QFileDialog::getExistingDirectory(this, "Select directory to put store downloads in",
                                                          settings.storeDownloadDir(), QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog);
@@ -709,9 +721,9 @@ void DlgSettings::on_spinBoxAppFontSize_valueChanged(int arg1) {
 
 void DlgSettings::on_btnTestReqServer_clicked() {
     OKJSongbookAPI *api = new OKJSongbookAPI(this);
-    connect(api, SIGNAL(testFailed(QString)), this, SLOT(reqSvrTestError(QString)));
-    connect(api, SIGNAL(testSslError(QString)), this, SLOT(reqSvrTestSslError(QString)));
-    connect(api, SIGNAL(testPassed()), this, SLOT(reqSvrTestPassed()));
+    connect(api, &OKJSongbookAPI::testFailed,   this, &DlgSettings::reqSvrTestError);
+    connect(api, &OKJSongbookAPI::testSslError, this, &DlgSettings::reqSvrTestSslError);
+    connect(api, &OKJSongbookAPI::testPassed,   this, &DlgSettings::reqSvrTestPassed);
     // Delete api once the async test resolves (it is also parented to this as fallback).
     connect(api, &OKJSongbookAPI::testPassed, api, &QObject::deleteLater);
     connect(api, &OKJSongbookAPI::testFailed,   api, [api](const QString &) { api->deleteLater(); });

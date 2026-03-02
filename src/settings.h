@@ -255,6 +255,10 @@ public:
     bool checkUpdates();
     int updatesBranch();
     int theme();
+    bool touchFriendlyEnabled();
+    void setTouchFriendlyEnabled(bool enabled);
+    int appTheme();
+    void setAppTheme(int theme);
     const QPoint durationPosition();
     bool dbDirectoryWatchEnabled();
     SfxEntryList getSfxEntries();
@@ -352,6 +356,8 @@ signals:
     void videoOffsetChanged(const int offsetMs);
     void lastSingerAddPositionTypeChanged(const int type);
     void shortcutsChanged();
+    void touchFriendlyEnabledChanged(bool enabled);
+    void appThemeChanged(int theme);
 
 
 public slots:

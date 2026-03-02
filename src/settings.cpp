@@ -1174,6 +1174,25 @@ void Settings::setTheme(int theme) {
     settings->setValue("theme", theme);
 }
 
+bool Settings::touchFriendlyEnabled() {
+    return settings->value("touchFriendlyEnabled", false).toBool();
+}
+
+void Settings::setTouchFriendlyEnabled(bool enabled) {
+    settings->setValue("touchFriendlyEnabled", enabled);
+    emit touchFriendlyEnabledChanged(enabled);
+}
+
+int Settings::appTheme() {
+    return settings->value("appTheme", 0).toInt();
+}
+
+void Settings::setAppTheme(int theme) {
+    settings->setValue("appTheme", theme);
+    emit appThemeChanged(theme);
+}
+
+
 void Settings::setBookCreatorCols(int cols) {
     settings->setValue("bookCreatorCols", cols);
 }
