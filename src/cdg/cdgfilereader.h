@@ -19,6 +19,7 @@ public:
     bool moveToNextFrame();
 
     std::array<uchar, cdg::CDG_IMAGE_SIZE> currentFrame() { return m_current_image_data; }
+    const uchar* currentFrameARGB32Bits() const { return m_current_frame_argb.constBits(); }
     int currentFrameDurationMS();
     int currentFramePositionMS();
 
@@ -61,6 +62,7 @@ private:
 
     std::array<uchar, cdg::CDG_IMAGE_SIZE> m_current_image_data;
     int m_current_image_pgk_idx;
+    QImage m_current_frame_argb;
 
     CdgImageFrame m_next_image;
     int m_next_image_pgk_idx;
