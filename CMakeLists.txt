@@ -30,6 +30,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Disable APIs deprecated before Qt 5.15 to ease the Qt 6 bridge
 add_definitions(-DQT_DISABLE_DEPRECATED_BEFORE=0x050F00)
 
+// Search Qt6 first, then fall back to Qt5 when both are installed.
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Sql Network Widgets Concurrent Svg PrintSupport REQUIRED)
 if(QT_VERSION_MAJOR EQUAL 6)

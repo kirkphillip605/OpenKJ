@@ -673,10 +673,10 @@ void DlgSettings::on_cbxTheme_currentIndexChanged(int index) {
     settings.setTheme(index);
 }
 
-void DlgSettings::on_comboBoxAppTheme_currentIndexChanged(int index) {
+void DlgSettings::on_comboBoxAppTheme_currentIndexChanged(int themeIndex) {
     if (!m_pageSetupDone)
         return;
-    settings.setAppTheme(index);
+    settings.setAppTheme(themeIndex);
 }
 
 void DlgSettings::on_checkBoxTouchFriendly_toggled(bool checked) {

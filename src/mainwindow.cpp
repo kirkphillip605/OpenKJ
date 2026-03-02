@@ -3842,18 +3842,10 @@ void MainWindow::applyTouchFriendly(bool enabled)
         }
     }
 
-    if (enabled) {
-        const auto buttons = findChildren<QPushButton *>();
-        for (auto *btn : buttons) {
-            btn->setMinimumHeight(kTouchBtnMinHeight);
-            btn->setMinimumWidth(kTouchBtnMinWidth);
-        }
-    } else {
-        const auto buttons = findChildren<QPushButton *>();
-        for (auto *btn : buttons) {
-            btn->setMinimumHeight(0);
-            btn->setMinimumWidth(0);
-        }
+    const auto buttons = findChildren<QPushButton *>();
+    for (auto *btn : buttons) {
+        btn->setMinimumHeight(enabled ? kTouchBtnMinHeight : 0);
+        btn->setMinimumWidth(enabled ? kTouchBtnMinWidth : 0);
     }
 }
 

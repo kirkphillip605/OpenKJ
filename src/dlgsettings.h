@@ -106,7 +106,7 @@ private slots:
     void on_spinBoxInterval_valueChanged(int arg1);
     void tickerShowRotationInfoChanged(bool show);
     void on_cbxTheme_currentIndexChanged(int index);
-    void on_comboBoxAppTheme_currentIndexChanged(int index);
+    void on_comboBoxAppTheme_currentIndexChanged(int themeIndex);
     void on_checkBoxTouchFriendly_toggled(bool checked);
     void on_btnBrowse_clicked();
     void on_fontComboBox_currentFontChanged(const QFont &f);
