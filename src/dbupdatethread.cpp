@@ -627,7 +627,7 @@ void DbUpdateThread::run()
     emit progressMaxChanged(missingFiles.size());
     int count = 0;
     qInfo() << "Looking for missing files";
-    query.exec("BEGIN TRANSACTION");
+    database.transaction();
     for (int f=0; f<missingFiles.size(); f++)
     {
         emit progressMessage("Looking for matches to missing db song: " + missingFiles.at(f));
@@ -662,8 +662,9 @@ void DbUpdateThread::run()
         emit progressChanged(count);
     }
     qInfo() << "Committing transaction";
-    query.exec("COMMIT TRANSACTION");
+    database.commit();
     qInfo() << "Processing dragged/dropped files";
+    database.transaction();
     for (int f=0; f < dragDropFiles.size(); f++)
     {
         QString dropFile = dragDropFiles.at(f);
@@ -726,6 +727,7 @@ void DbUpdateThread::run()
             }
         }
     }
+    database.commit();
     qInfo() << "Adding new songs";
     // Add new songs to the database
     emit progressMaxChanged(newSongs.size());
@@ -745,8 +747,7 @@ void DbUpdateThread::run()
     qInfo() << query.lastError();
     query.exec("PRAGMA temp_store=2");
     qInfo() << "Beginning transaction";
-    query.exec("BEGIN TRANSACTION");
-    //database.transaction();
+    database.transaction();
     emit progressMessage("Checking if files are valid and getting durations...");
     emit stateChanged("Validating karaoke files and getting song durations...");
     qInfo() << "Preparing statement";
@@ -838,8 +839,7 @@ void DbUpdateThread::run()
 //    delete process;
 //    delete archive;
     qInfo() << "Committing transaction";
-    //database.commit();
-    query.exec("COMMIT TRANSACTION");
+    database.commit();
     qInfo() << "QSqlDatabase last error: " << database.lastError();
     qInfo() << "QSqlQuery last error: " << query.lastError();
     emit progressMessage("Done processing new files.");

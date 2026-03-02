@@ -11,7 +11,7 @@ void KaraokeFileInfo::readTags()
 {
     if (tagsRead)
         return;
-    TagReader *tagReader = new TagReader(this);
+    TagReader tagReader;
 
     if (fileName.endsWith(".cdg", Qt::CaseInsensitive))
     {
@@ -26,11 +26,11 @@ void KaraokeFileInfo::readTags()
             mediaFile = baseFn + "MP3";
         else if (QFile::exists(baseFn + "mP3"))
             mediaFile = baseFn + "mP3";
-        tagReader->setMedia(mediaFile);
-        tagArtist = tagReader->getArtist();
-        tagTitle = tagReader->getTitle();
-        tagSongid = tagReader->getAlbum();
-        QString track = tagReader->getTrack();
+        tagReader.setMedia(mediaFile);
+        tagArtist = tagReader.getArtist();
+        tagTitle = tagReader.getTitle();
+        tagSongid = tagReader.getAlbum();
+        QString track = tagReader.getTrack();
         if (track != "")
         {
             tagSongid.append("-" + track);
@@ -45,12 +45,12 @@ void KaraokeFileInfo::readTags()
         QByteArray audioData = archive.extractAudioToMemory();
         if (!audioData.isEmpty())
         {
-            tagReader->setMediaFromBuffer(audioData, archive.audioExtension());
+            tagReader.setMediaFromBuffer(audioData, archive.audioExtension());
         }
-        tagArtist = tagReader->getArtist();
-        tagTitle = tagReader->getTitle();
-        tagSongid = tagReader->getAlbum();
-        QString track = tagReader->getTrack();
+        tagArtist = tagReader.getArtist();
+        tagTitle = tagReader.getTitle();
+        tagSongid = tagReader.getAlbum();
+        QString track = tagReader.getTrack();
         if (track != "")
         {
             tagSongid.append("-" + track);
@@ -59,18 +59,17 @@ void KaraokeFileInfo::readTags()
     else
     {
         qInfo() << "KaraokeFileInfo::readTags() called on non zip or cdg file (" << fileName << ").  Trying taglib.";
-        tagReader->setMedia(fileName);
-        tagArtist = tagReader->getArtist();
-        tagTitle = tagReader->getTitle();
-        tagSongid = tagReader->getAlbum();
-        duration = tagReader->getDuration();
+        tagReader.setMedia(fileName);
+        tagArtist = tagReader.getArtist();
+        tagTitle = tagReader.getTitle();
+        tagSongid = tagReader.getAlbum();
+        duration = tagReader.getDuration();
 //        tagArtist = "Error";
 //        tagTitle = "Error";
 //        tagSongid = "Error";
 //        duration = 0;
     }
     tagsRead = true;
-    delete tagReader;
 }
 
 void KaraokeFileInfo::setFileName(const QString &filename)

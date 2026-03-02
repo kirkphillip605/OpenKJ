@@ -363,13 +363,16 @@ void TableModelKaraokeSongs::markSongBad(QString path) {
     query.bindValue(":path", path);
     query.exec();
 
-    emit layoutAboutToBeChanged();
-    auto newFilteredEnd = std::remove_if(m_filteredSongs.begin(), m_filteredSongs.end(),
-                                         [&path](const std::shared_ptr<KaraokeSong> &song) {
-                                             return (song->path == path);
-                                         });
-    m_filteredSongs.erase(newFilteredEnd, m_filteredSongs.end());
-    emit layoutChanged();
+    auto it = std::find_if(m_filteredSongs.begin(), m_filteredSongs.end(),
+                           [&path](const std::shared_ptr<KaraokeSong> &song) {
+                               return (song->path == path);
+                           });
+    if (it != m_filteredSongs.end()) {
+        int row = (int)std::distance(m_filteredSongs.begin(), it);
+        beginRemoveRows(QModelIndex(), row, row);
+        m_filteredSongs.erase(it);
+        endRemoveRows();
+    }
 
     auto newAllSongsEnd = std::remove_if(m_allSongs.begin(), m_allSongs.end(),
                                          [&path](const std::shared_ptr<KaraokeSong> &song) {
@@ -393,14 +396,17 @@ TableModelKaraokeSongs::DeleteStatus TableModelKaraokeSongs::removeBadSong(QStri
         query.bindValue(":path", path);
         query.exec();
 
-        emit layoutAboutToBeChanged();
-        auto newFilteredEnd = std::remove_if(m_filteredSongs.begin(), m_filteredSongs.end(),
-                                             [&path](const std::shared_ptr<KaraokeSong> &song) {
-                                                 return (song->path == path);
-                                             });
-        m_filteredSongs.erase(newFilteredEnd, m_filteredSongs.end());
+        auto it = std::find_if(m_filteredSongs.begin(), m_filteredSongs.end(),
+                               [&path](const std::shared_ptr<KaraokeSong> &song) {
+                                   return (song->path == path);
+                               });
+        if (it != m_filteredSongs.end()) {
+            int row = (int)std::distance(m_filteredSongs.begin(), it);
+            beginRemoveRows(QModelIndex(), row, row);
+            m_filteredSongs.erase(it);
+            endRemoveRows();
+        }
 
-        emit layoutChanged();
         auto newAllSongsEnd = std::remove_if(m_allSongs.begin(), m_allSongs.end(),
                                              [&path](const std::shared_ptr<KaraokeSong> &song) {
                                                  return (song->path == path);
