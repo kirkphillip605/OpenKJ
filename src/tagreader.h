@@ -2,6 +2,7 @@
 #define TAGREADER_H
 
 #include <QObject>
+#include <QByteArray>
 #include <gst/gst.h>
 #include <gst/pbutils/pbutils.h>
 
@@ -27,6 +28,7 @@ public:
     QString getTrack();
     unsigned int getDuration();
     void setMedia(QString path);
+    void setMediaFromBuffer(const QByteArray &data, const QString &extension);
     void taglibTags(QString path);
 
 signals:

@@ -1,7 +1,11 @@
 #include "tagreader.h"
 #include <QDebug>
+#include <limits>
 #include <tag.h>
 #include <taglib/fileref.h>
+#include <taglib/mpeg/mpegfile.h>
+#include <taglib/toolkit/tbytevectorstream.h>
+#include <taglib/mpeg/id3v2/id3v2framefactory.h>
 
 TagReader::TagReader(QObject *parent) : QObject(parent)
 {
@@ -116,6 +120,43 @@ void TagReader::taglibTags(QString path)
         m_artist = QString();
         m_title = QString();
         m_album = QString();
+        m_duration = 0;
+    }
+}
+
+void TagReader::setMediaFromBuffer(const QByteArray &data, const QString &extension)
+{
+    qInfo() << "Getting tags from in-memory buffer, extension: " << extension;
+    if (data.size() > static_cast<qsizetype>(std::numeric_limits<unsigned int>::max())) {
+        qWarning() << "Audio buffer too large for in-memory tag reading, skipping";
+        return;
+    }
+    TagLib::ByteVector bv(data.constData(), static_cast<unsigned int>(data.size()));
+    TagLib::ByteVectorStream stream(bv);
+    TagLib::MPEG::File f(&stream, TagLib::ID3v2::FrameFactory::instance());
+    if (!f.isNull() && f.tag())
+    {
+        m_artist = f.tag()->artist().toCString(true);
+        m_title  = f.tag()->title().toCString(true);
+        m_album  = f.tag()->album().toCString(true);
+        int track = static_cast<int>(f.tag()->track());
+        if (track == 0)
+            m_track = QString();
+        else if (track < 10)
+            m_track = "0" + QString::number(track);
+        else
+            m_track = QString::number(track);
+        m_duration = f.audioProperties() ? static_cast<unsigned int>(f.audioProperties()->length()) * 1000 : 0;
+        qInfo() << "In-memory taglib result - Artist:" << m_artist << "Title:" << m_title
+                << "Album:" << m_album << "Track:" << m_track << "Duration:" << m_duration;
+    }
+    else
+    {
+        qWarning() << "Taglib was unable to process the in-memory buffer";
+        m_artist = QString();
+        m_title  = QString();
+        m_album  = QString();
+        m_track  = QString();
         m_duration = 0;
     }
 }

@@ -399,6 +399,8 @@ set(SOURCE_FILES
         src/dlgvideopreview.cpp
         src/mainwindow.cpp
         src/dbupdatethread.cpp
+        src/databasemanager.cpp
+        src/shortcutmanager.cpp
         src/dlgkeychange.cpp
         src/dlgdatabase.cpp
         src/dlgrequests.cpp
@@ -456,6 +458,8 @@ set(SOURCE_FILES
         src/mzarchive.h
         src/okjutil.h
         src/dbupdatethread.h
+        src/databasemanager.h
+        src/shortcutmanager.h
         src/dlgkeychange.h
         src/dlgdatabase.h
         src/dlgrequests.h

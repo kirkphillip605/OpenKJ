@@ -60,6 +60,7 @@
 #include "src/models/tablemodelhistorysongs.h"
 #include "src/models/tablemodelplaylistsongs.h"
 #include "src/models/tablemodelqueuesongs.h"
+#include "shortcutmanager.h"
 
 namespace Ui {
     class MainWindow;
@@ -67,6 +68,8 @@ namespace Ui {
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
+
+friend class ShortcutManager;
 
 private:
     Ui::MainWindow *ui;
@@ -129,32 +132,7 @@ private:
     QTimer m_timerButtonFlash;
     bool kNeedAutoSize{false};
     bool bNeedAutoSize{true};
-    QShortcut *scutAddSinger{nullptr};
-    QShortcut *scutKSelectNextSinger{nullptr};
-    QShortcut *scutKPlayNextUnsung{nullptr};
-    QShortcut *scutBFfwd{nullptr};
-    QShortcut *scutBPause{nullptr};
-    QShortcut *scutBRestartSong{nullptr};
-    QShortcut *scutBRwnd{nullptr};
-    QShortcut *scutBStop{nullptr};
-    QShortcut *scutBVolDn{nullptr};
-    QShortcut *scutBVolMute{nullptr};
-    QShortcut *scutBVolUp{nullptr};
-    QShortcut *scutJumpToSearch{nullptr};
-    QShortcut *scutKFfwd{nullptr};
-    QShortcut *scutKPause{nullptr};
-    QShortcut *scutKRestartSong{nullptr};
-    QShortcut *scutKRwnd{nullptr};
-    QShortcut *scutKStop{nullptr};
-    QShortcut *scutKVolDn{nullptr};
-    QShortcut *scutKVolMute{nullptr};
-    QShortcut *scutKVolUp{nullptr};
-    QShortcut *scutLoadRegularSinger{nullptr};
-    QShortcut *scutRequests{nullptr};
-    QShortcut *scutToggleSingerWindow{nullptr};
-    QShortcut *scutDeleteSinger{nullptr};
-    QShortcut *scutDeleteSong{nullptr};
-    QShortcut *scutDeletePlSong{nullptr};
+    ShortcutManager *m_shortcutManager{nullptr};
     QWidget *historyTabWidget;
     void addSfxButton(const QString &filename, const QString &label, const bool &reset = false);
     void refreshSfxButtons();

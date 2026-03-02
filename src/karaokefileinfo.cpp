@@ -1,9 +1,10 @@
 #include "karaokefileinfo.h"
 #include <QRegularExpression>
 #include <QDebug>
-#include <QTemporaryDir>
+#include <QFile>
+#include <QDir>
 #include "tagreader.h"
-#include "okarchive.h"
+#include "mzarchive.h"
 #include <QSqlQuery>
 
 void KaraokeFileInfo::readTags()
@@ -37,17 +38,18 @@ void KaraokeFileInfo::readTags()
     }
     else if (fileName.endsWith(".zip", Qt::CaseInsensitive))
     {
-        OkArchive archive;
-        QTemporaryDir dir;
+        MzArchive archive;
         archive.setArchiveFile(fileName);
         archive.checkAudio();
-        QString audioFile = "temp" + archive.audioExtension();
-        archive.extractAudio(dir.path(), audioFile);
-        tagReader->setMedia(dir.path() + QDir::separator() + audioFile);
+        duration = archive.getSongDuration();
+        QByteArray audioData = archive.extractAudioToMemory();
+        if (!audioData.isEmpty())
+        {
+            tagReader->setMediaFromBuffer(audioData, archive.audioExtension());
+        }
         tagArtist = tagReader->getArtist();
         tagTitle = tagReader->getTitle();
         tagSongid = tagReader->getAlbum();
-        duration = archive.getSongDuration();
         QString track = tagReader->getTrack();
         if (track != "")
         {

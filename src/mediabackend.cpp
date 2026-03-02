@@ -19,7 +19,6 @@
 */
 
 #include "mediabackend.h"
-#include <QApplication>
 #include <QDebug>
 #include <cmath>
 #include <QFile>
@@ -244,8 +243,7 @@ void MediaBackend::play()
         {
             qInfo() << " - play - CDG file doesn't exist, bailing out";
             emit stateChanged(PlayingState);
-            QApplication::processEvents();
-            emit stateChanged(EndOfMediaState);
+            QMetaObject::invokeMethod(this, [this]{ emit stateChanged(EndOfMediaState); }, Qt::QueuedConnection);
             return;
         }
 
@@ -279,8 +277,7 @@ void MediaBackend::play()
         {
             qInfo() << " - play - File doesn't exist, bailing out";
             emit stateChanged(PlayingState);
-            QApplication::processEvents();
-            emit stateChanged(EndOfMediaState);
+            QMetaObject::invokeMethod(this, [this]{ emit stateChanged(EndOfMediaState); }, Qt::QueuedConnection);
             return;
         }
     }
@@ -1088,11 +1085,6 @@ void MediaBackend::setAudioOutputDevice(const AudioOutputDevice &device)
         qInfo() << m_objName << " - Waiting for stopped state";
         GstState curState;
         gst_element_get_state(m_pipeline, &curState, nullptr, GST_CLOCK_TIME_NONE);
-        while (curState != GST_STATE_NULL)
-        {
-            gst_element_get_state(m_pipeline, &curState, nullptr, GST_CLOCK_TIME_NONE);
-            QApplication::processEvents();
-        }
         qInfo() << m_objName << " - Stop done, continuing";
     }
     qInfo() << m_objName << " - Unlinking and removing old elements";
@@ -1118,11 +1110,6 @@ void MediaBackend::setAudioOutputDevice(const AudioOutputDevice &device)
         qInfo() << m_objName << " - Waiting for playing state";
         GstState curState;
         gst_element_get_state(m_pipeline, &curState, nullptr, GST_CLOCK_TIME_NONE);
-        while (curState != GST_STATE_PLAYING)
-        {
-            gst_element_get_state(m_pipeline, &curState, nullptr, GST_CLOCK_TIME_NONE);
-            QApplication::processEvents();
-        }
         qInfo() << m_objName << "Playing, jumping back to current playback position";
         setPosition(curpos);
     }
