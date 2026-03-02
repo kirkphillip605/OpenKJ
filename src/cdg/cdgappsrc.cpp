@@ -3,6 +3,13 @@
 #include "cdg/cdgfilereader.h"
 #include <QMutex>
 #include <QDebug>
+#include <vector>
+#include "xbrz.h"
+
+static constexpr int XBRZ_SCALE_FACTOR = 5;
+static constexpr int SCALED_WIDTH      = 300 * XBRZ_SCALE_FACTOR; // 1500
+static constexpr int SCALED_HEIGHT     = 216 * XBRZ_SCALE_FACTOR; // 1080
+static constexpr int BYTES_PER_PIXEL   = 4; // xBRZ ARGB = 4 bytes per pixel
 
 CdgAppSrc::CdgAppSrc()
 {
@@ -11,9 +18,9 @@ CdgAppSrc::CdgAppSrc()
 
     auto appSrcCaps = gst_caps_new_simple(
                 "video/x-raw",
-                "format", G_TYPE_STRING, "RGB8P",
-                "width",  G_TYPE_INT, cdg::FRAME_DIM_CROPPED.width(),
-                "height", G_TYPE_INT, cdg::FRAME_DIM_CROPPED.height(),
+                "format", G_TYPE_STRING, "BGRA",
+                "width",  G_TYPE_INT, SCALED_WIDTH,
+                "height", G_TYPE_INT, SCALED_HEIGHT,
                 "pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
                 NULL);
 
@@ -21,7 +28,7 @@ CdgAppSrc::CdgAppSrc()
     gst_caps_unref(appSrcCaps);
 
     g_object_set(m_cdgAppSrc, "stream-type", GST_APP_STREAM_TYPE_SEEKABLE, "format", GST_FORMAT_TIME, NULL);
-    gst_app_src_set_max_bytes(m_cdgAppSrc, cdg::CDG_IMAGE_SIZE * 200);
+    gst_app_src_set_max_bytes(m_cdgAppSrc, static_cast<guint64>(SCALED_WIDTH) * SCALED_HEIGHT * BYTES_PER_PIXEL * 4);
 
     GstAppSrcCallbacks callbacks;
     callbacks.need_data	  = &CdgAppSrc::cb_need_data;
@@ -76,12 +83,17 @@ void CdgAppSrc::cb_need_data(GstAppSrc *appsrc, [[maybe_unused]]guint unused_siz
     {
         if(instance->m_cdgFileReader->moveToNextFrame())
         {
-            auto buffer = gst_buffer_new_and_alloc(cdg::CDG_IMAGE_SIZE);
-            gst_buffer_fill(buffer,
-                            0,
-                            instance->m_cdgFileReader->currentFrame().data(),
-                            cdg::CDG_IMAGE_SIZE
-                            );
+            // Apply xBRZ 5x upscale: 300x216 -> 1500x1080
+            const auto* srcPixels = reinterpret_cast<const uint32_t*>(
+                instance->m_cdgFileReader->currentFrameARGB32Bits());
+            constexpr gsize scaledSize = static_cast<gsize>(SCALED_WIDTH) * SCALED_HEIGHT * BYTES_PER_PIXEL;
+            std::vector<uint32_t> scaledBuf(static_cast<size_t>(SCALED_WIDTH) * SCALED_HEIGHT);
+            xbrz::scale(XBRZ_SCALE_FACTOR, srcPixels, scaledBuf.data(),
+                        cdg::FRAME_DIM_FULL.width(), cdg::FRAME_DIM_FULL.height(),
+                        xbrz::ColorFormat::ARGB);
+
+            auto buffer = gst_buffer_new_and_alloc(scaledSize);
+            gst_buffer_fill(buffer, 0, scaledBuf.data(), scaledSize);
 
             GST_BUFFER_PTS(buffer) = instance->m_cdgFileReader->currentFramePositionMS() * GST_MSECOND;
             GST_BUFFER_DURATION(buffer) = instance->m_cdgFileReader->currentFrameDurationMS() * GST_MSECOND;

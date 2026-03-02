@@ -550,6 +550,10 @@ set(SOURCE_FILES
         src/cdg/cdgimageframe.cpp
         src/cdg/cdgimageframe.h
         src/cdg/libCDG.h
+        src/cdg/xbrz.cpp
+        src/cdg/xbrz.h
+        src/cdg/xbrz_config.h
+        src/cdg/xbrz_tools.h
         src/gstreamer/gstreamerhelper.cpp
         src/gstreamer/gstreamerhelper.h
         src/dlgdebugoutput.cpp

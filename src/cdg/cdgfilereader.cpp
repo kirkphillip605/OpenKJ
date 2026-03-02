@@ -37,6 +37,7 @@ bool CdgFileReader::moveToNextFrame()
 
     // shift m_next_image to current image
     m_next_image.copyCroppedImagedata(m_current_image_data.data());
+    m_current_frame_argb = m_next_image.getImage().convertToFormat(QImage::Format_ARGB32);
     m_current_image_pgk_idx = m_next_image_pgk_idx;
 
     bool imageChanged = false;
