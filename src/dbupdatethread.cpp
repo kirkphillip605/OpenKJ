@@ -25,7 +25,6 @@
 #include <QDirIterator>
 #include <QDebug>
 #include <QStandardPaths>
-#include <QApplication>
 #include "src/models/tablemodelkaraokesourcedirs.h"
 #include <QtConcurrent>
 #include "mzarchive.h"
@@ -149,7 +148,6 @@ QStringList DbUpdateThread::findKaraokeFiles(QString directory)
     query.prepare("SELECT songid FROM dbsongs WHERE path = :filepath AND discid != '!!DROPPED!!' LIMIT 1");
     int loops = 0;
     while (iterator.hasNext()) {
-        QApplication::processEvents();
         iterator.next();
         if (!iterator.fileInfo().isDir()) {
             total++;
@@ -374,7 +372,6 @@ void DbUpdateThread::startUnthreaded()
     database.transaction();
     for (int f=0; f<missingFiles.size(); f++)
     {
-        QApplication::processEvents();
         emit progressMessage("Looking for matches to missing db song: " + missingFiles.at(f));
         qInfo() << "Looking for match for missing file: " << missingFiles.at(f);
         bool matchfound = false;
@@ -383,7 +380,6 @@ void DbUpdateThread::startUnthreaded()
         query.prepare("UPDATE dbsongs SET path = :newpath WHERE path = :oldpath");
         for (int i=0; i < newSongs.size(); i++)
         {
-            QApplication::processEvents();
             missingFile = missingFiles.at(f);
             newFile = newSongs.at(i);
             if (QFileInfo(newSongs.at(i)).fileName() == QFileInfo(missingFiles.at(f)).fileName())
@@ -412,7 +408,6 @@ void DbUpdateThread::startUnthreaded()
     qInfo() << "Processing dragged/dropped files";
     for (int f=0; f < dragDropFiles.size(); f++)
     {
-        QApplication::processEvents();
         QString dropFile = dragDropFiles.at(f);
         qInfo() << "Looking for matches for drop file: " << dropFile;
         query.prepare("UPDATE dbsongs SET discid = :discid, artist = :artist, title = :title, filename = :filename, duration = :duration, searchstring = :searchstring WHERE path = :path");
@@ -426,7 +421,6 @@ void DbUpdateThread::startUnthreaded()
 
         for (int i=0; i < newSongs.size(); i++)
         {
-            QApplication::processEvents();
             if (newSongs.at(i) == dropFile)
             {
                 qInfo() << "Found match for drop file: " << dropFile;
@@ -500,7 +494,6 @@ void DbUpdateThread::startUnthreaded()
     int loops = 0;
     for (int i=0; i < newSongs.count(); i++)
     {
-        QApplication::processEvents();
         QString fileName = newSongs.at(i);
         //qInfo() << "Beginning processing file: " << fileName;
         QFileInfo file(fileName);

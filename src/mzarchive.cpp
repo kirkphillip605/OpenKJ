@@ -24,6 +24,7 @@
 #include <QFile>
 #include <QBuffer>
 #include <QTemporaryDir>
+#include <limits>
 #include "src/miniz/miniz.h"
 #ifdef Q_OS_WIN
 #include <io.h>
@@ -136,6 +137,52 @@ bool MzArchive::checkAudio()
 QString MzArchive::audioExtension()
 {
     return audioExt;
+}
+
+QByteArray MzArchive::extractAudioToMemory()
+{
+    if (!findAudio())
+        return QByteArray();
+
+    if (!m_audioSupportedCompression)
+    {
+        qWarning() << archiveFile << " - Archive using non-standard compression, falling back to disk extraction";
+        QTemporaryDir dir;
+        QString tmpFile = dir.path() + QDir::separator() + "temp" + audioExt;
+        if (!oka.extractAudio(dir.path(), "temp" + audioExt))
+            return QByteArray();
+        QFile f(tmpFile);
+        if (!f.open(QIODevice::ReadOnly))
+            return QByteArray();
+        return f.readAll();
+    }
+
+    mz_zip_archive archive;
+    memset(&archive, 0, sizeof(archive));
+    QFile zipFile(archiveFile);
+    zipFile.open(QIODevice::ReadOnly);
+    QByteArray zipData = zipFile.readAll();
+    zipFile.close();
+    if (!mz_zip_reader_init_mem(&archive, zipData.data(), zipData.size(), 0))
+        return QByteArray();
+
+    size_t outSize = 0;
+    void *outData = mz_zip_reader_extract_to_heap(&archive, m_audioFileIndex, &outSize, 0);
+    mz_zip_reader_end(&archive);
+    if (!outData)
+    {
+        qCritical() << "Failed to extract audio to memory";
+        return QByteArray();
+    }
+    if (outSize > static_cast<size_t>(std::numeric_limits<int>::max()))
+    {
+        qCritical() << "Extracted audio buffer is too large for QByteArray";
+        mz_free(outData);
+        return QByteArray();
+    }
+    QByteArray result(reinterpret_cast<const char *>(outData), static_cast<int>(outSize));
+    mz_free(outData);
+    return result;
 }
 
 bool MzArchive::extractAudio(QString destPath, QString destFile)
