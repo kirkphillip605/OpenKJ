@@ -86,6 +86,7 @@ void DirectoryMonitor::onDirectoryChanged(const QString &path)
         const QString connName =
             QStringLiteral("dirmon_%1").arg(s_counter.fetch_add(1));
 
+        bool added = false;
         {
             QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", connName);
             db.setDatabaseName(dbPath);
@@ -95,7 +96,6 @@ void DirectoryMonitor::onDirectoryChanged(const QString &path)
                 return;
             }
 
-            bool added = false;
             for (const QString &file : candidates) {
                 // Check whether this file is already in the database.
                 QSqlQuery checkQ(db);

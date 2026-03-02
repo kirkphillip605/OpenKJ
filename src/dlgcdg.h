@@ -53,7 +53,7 @@ public:
     setContentsMargins(0,0,0,0);
     label = new QLabel(this);
     layout->addWidget(label);
-    // label->setMargin(0) is no-op here since label uses box model
+    // label->setMargin(0) removed — QLabel::setMargin() is deprecated since Qt 5.x.
     label->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     label->setText("00:00");
     label->setAutoFillBackground(true);

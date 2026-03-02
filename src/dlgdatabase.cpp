@@ -266,6 +266,8 @@ void DlgDatabase::dbupdate_thread_finished()
 }
 
 void DlgDatabase::showDbUpdateErrors(QStringList errors)
+{
+    if (errors.count() > 0)
     {
         QMessageBox msgBox;
         msgBox.setText(tr("Some files were skipped due to problems"));
