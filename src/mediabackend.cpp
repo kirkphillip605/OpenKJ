@@ -573,14 +573,36 @@ void MediaBackend::gstBusFunc(GstMessage *message)
             GError *err;
             gchar *debug;
             gst_message_parse_error(message, &err, &debug);
-            qInfo() << m_objName << " - Gst error: " << err->message;
-            qInfo() << m_objName << " - Gst debug: " << debug;
+            qCritical() << m_objName << " - Gst error: " << err->message;
+            qCritical() << m_objName << " - Gst debug: " << debug;
             if (QString(err->message) == "Your GStreamer installation is missing a plug-in.")
             {
                 QString player = (m_objName == "KAR") ? "karaoke" : "break music";
-                qInfo() << m_objName << " - PLAYBACK ERROR - Missing Codec";
+                qCritical() << m_objName << " - PLAYBACK ERROR - Missing Codec";
                 emit audioError("Unable to play " + player + " file, missing gstreamer plugin");
                 stop(true);
+            }
+            else if (err->domain == GST_RESOURCE_ERROR &&
+                     (err->code == GST_RESOURCE_ERROR_OPEN_WRITE ||
+                      err->code == GST_RESOURCE_ERROR_WRITE      ||
+                      err->code == GST_RESOURCE_ERROR_NOT_FOUND))
+            {
+                // Audio device lost or unavailable — attempt graceful fallback.
+                qCritical() << m_objName << " - Audio device error, attempting fallback to system default";
+                if (m_outputDevice.index != 0)
+                {
+                    // Schedule the device switch on the next event loop iteration to
+                    // avoid re-entering GStreamer state-change machinery mid-callback.
+                    QMetaObject::invokeMethod(this, [this]() {
+                        setAudioOutputDevice(AudioOutputDevice{"0 - Default", nullptr, 0});
+                    }, Qt::QueuedConnection);
+                }
+                else
+                {
+                    // Already on default device; stop cleanly rather than hang.
+                    QMetaObject::invokeMethod(this, [this]() { stop(true); },
+                                             Qt::QueuedConnection);
+                }
             }
             g_error_free(err);
             g_free(debug);

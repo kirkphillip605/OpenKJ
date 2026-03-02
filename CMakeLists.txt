@@ -27,6 +27,9 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Disable APIs deprecated before Qt 5.15 to ease the Qt 6 bridge
+add_definitions(-DQT_DISABLE_DEPRECATED_BEFORE=0x050F00)
+
 find_package(QT NAMES Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Gui Sql Network Widgets Concurrent Svg PrintSupport REQUIRED)
 
@@ -400,6 +403,7 @@ set(SOURCE_FILES
         src/mainwindow.cpp
         src/dbupdatethread.cpp
         src/databasemanager.cpp
+        src/directorymonitor.cpp
         src/shortcutmanager.cpp
         src/dlgkeychange.cpp
         src/dlgdatabase.cpp
@@ -459,6 +463,7 @@ set(SOURCE_FILES
         src/okjutil.h
         src/dbupdatethread.h
         src/databasemanager.h
+        src/directorymonitor.h
         src/shortcutmanager.h
         src/dlgkeychange.h
         src/dlgdatabase.h

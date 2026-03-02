@@ -21,7 +21,7 @@
 #include "settings.h"
 #include <QCoreApplication>
 #include <QApplication>
-#include <QDesktopWidget>
+// (QDesktopWidget removed — no longer used; use QGuiApplication::screens() instead)
 #include <QStandardPaths>
 #include <QDebug>
 #include <QCryptographicHash>

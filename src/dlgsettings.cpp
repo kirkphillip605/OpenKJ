@@ -22,7 +22,7 @@
 #include "ui_dlgsettings.h"
 #include <QDebug>
 #include <QGuiApplication>
-#include <QDesktopWidget>
+// (QDesktopWidget removed — no longer used; use QGuiApplication::screens() instead)
 #include <QFontDialog>
 #include <QColorDialog>
 #include <QFileDialog>
@@ -712,9 +712,11 @@ void DlgSettings::on_btnTestReqServer_clicked() {
     connect(api, SIGNAL(testFailed(QString)), this, SLOT(reqSvrTestError(QString)));
     connect(api, SIGNAL(testSslError(QString)), this, SLOT(reqSvrTestSslError(QString)));
     connect(api, SIGNAL(testPassed()), this, SLOT(reqSvrTestPassed()));
+    // Delete api once the async test resolves (it is also parented to this as fallback).
+    connect(api, &OKJSongbookAPI::testPassed, api, &QObject::deleteLater);
+    connect(api, &OKJSongbookAPI::testFailed,   api, [api](const QString &) { api->deleteLater(); });
+    connect(api, &OKJSongbookAPI::testSslError, api, [api](const QString &) { api->deleteLater(); });
     api->test();
-
-    delete api;
 }
 
 void DlgSettings::reqSvrTestError(QString error) {

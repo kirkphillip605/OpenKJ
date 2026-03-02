@@ -3,6 +3,7 @@
 #include "dlgsetpassword.h"
 #include "dlgpassword.h"
 #include "settings.h"
+#include <QRegularExpressionValidator>
 
 extern Settings settings;
 
@@ -12,10 +13,10 @@ DlgSongShopPurchase::DlgSongShopPurchase(SongShop *songShop, QWidget *parent) :
 {
     setupDone = false;
     ui->setupUi(this);
-    ui->lineEditCCN->setValidator(new QRegExpValidator(QRegExp("[0-9]*"), this));
-    ui->lineEditCCM->setValidator(new QRegExpValidator(QRegExp("[0-9]*"), this));
-    ui->lineEditCCY->setValidator(new QRegExpValidator(QRegExp("[0-9]*"), this));
-    ui->lineEditCCV->setValidator(new QRegExpValidator(QRegExp("[0-9]*"), this));
+    ui->lineEditCCN->setValidator(new QRegularExpressionValidator(QRegularExpression("[0-9]+"), this));
+    ui->lineEditCCM->setValidator(new QRegularExpressionValidator(QRegularExpression("[0-9]+"), this));
+    ui->lineEditCCY->setValidator(new QRegularExpressionValidator(QRegularExpression("[0-9]+"), this));
+    ui->lineEditCCV->setValidator(new QRegularExpressionValidator(QRegularExpression("[0-9]+"), this));
     shop = songShop;
     knLoginTest = false;
     ui->cbxSaveAccount->setChecked(settings.saveKNAccount());

@@ -2,7 +2,6 @@
 
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -130,7 +129,7 @@ void OKJSongbookAPI::setAccepting(bool enabled)
     manager->post(request, jsonDocument.toJson());
 }
 
-void OKJSongbookAPI::refreshVenues(bool blocking)
+void OKJSongbookAPI::refreshVenues()
 {
     QJsonObject mainObject;
     mainObject.insert("api_key", settings.requestServerApiKey());
@@ -139,12 +138,7 @@ void OKJSongbookAPI::refreshVenues(bool blocking)
     jsonDocument.setObject(mainObject);
     QNetworkRequest request(QUrl(settings.requestServerUrl()));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    QNetworkReply *reply = manager->post(request, jsonDocument.toJson());
-    if (blocking)
-    {
-        while (!reply->isFinished())
-            QApplication::processEvents();
-    }
+    manager->post(request, jsonDocument.toJson());
 }
 
 void OKJSongbookAPI::clearRequests()
@@ -164,51 +158,41 @@ void OKJSongbookAPI::updateSongDb()
 {
     cancelUpdate = false;
     updateInProgress = true;
+    m_pendingJsonDocs.clear();
+    m_songDbDocIndex = 0;
     emit remoteSongDbUpdateStart();
+
     int songsPerDoc = 1000;
-    QList<QJsonDocument> jsonDocs;
     QSqlQuery query;
     int numEntries = 0;
-    if (cancelUpdate)
-        return;
     if (query.exec("SELECT COUNT(DISTINCT artist||title) FROM dbsongs WHERE discid != '!!DROPPED!!' AND discid != '!!BAD!!'"))
     {
         if (query.next())
             numEntries = query.value(0).toInt();
     }
-    if (cancelUpdate)
-        return;
+
     if (query.exec("SELECT DISTINCT artist,title FROM dbsongs WHERE discid != '!!DROPPED!!' AND discid != '!!BAD!!' ORDER BY artist ASC, title ASC"))
     {
-        if (cancelUpdate)
-            return;
-        bool done = false;
         qInfo() << "Number of results: " << numEntries;
         int numDocs = numEntries / songsPerDoc;
         if (numEntries % songsPerDoc > 0)
             numDocs++;
         emit remoteSongDbUpdateNumDocs(numDocs);
         qInfo() << "Emitted remoteSongDbUpdateNumDocs(" << numDocs << ")";
-        int docs = 0;
+
+        bool done = false;
         while (!done)
         {
-            if (cancelUpdate)
-                return;
-            QApplication::processEvents();
             QJsonArray songsArray;
             int count = 0;
-            while ((query.next()) && (count < songsPerDoc))
+            while (query.next() && count < songsPerDoc)
             {
-                if (cancelUpdate)
-                    return;
                 QJsonObject songObject;
                 songObject.insert("artist", query.value(0).toString());
                 songObject.insert("title", query.value(1).toString());
                 songsArray.insert(0, songObject);
-                QApplication::processEvents();
                 count++;
             }
-            docs++;
             if (count < songsPerDoc)
                 done = true;
             QJsonObject mainObject;
@@ -218,97 +202,57 @@ void OKJSongbookAPI::updateSongDb()
             mainObject.insert("system_id", settings.systemId());
             QJsonDocument jsonDocument;
             jsonDocument.setObject(mainObject);
-            jsonDocs.append(jsonDocument);
-        }
-        QUrl url(settings.requestServerUrl());
-        QJsonObject mainObject;
-        mainObject.insert("api_key", settings.requestServerApiKey());
-        mainObject.insert("command","clearDatabase");
-        mainObject.insert("system_id", settings.systemId());
-        QJsonDocument jsonDocument;
-        jsonDocument.setObject(mainObject);
-        QNetworkRequest request(url);
-        if (cancelUpdate)
-            return;
-        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-        QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-        QNetworkReply *reply = manager->post(request, jsonDocument.toJson());
-        while (!reply->isFinished())
-            QApplication::processEvents();
-        qInfo() << reply->readAll();
-        for (int i=0; i < jsonDocs.size(); i++)
-        {
-            if (cancelUpdate)
-                return;
-            QApplication::processEvents();
-            QNetworkRequest request(url);
-            request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-            QNetworkAccessManager *manager = new QNetworkAccessManager(this);
-            QNetworkReply *reply = manager->post(request, jsonDocs.at(i).toJson());
-            while (!reply->isFinished()){
-                if (cancelUpdate)
-                    return;
-                QApplication::processEvents();
-            }
-            if (cancelUpdate)
-                return;
-            emit remoteSongDbUpdateProgress(i + 1);
+            m_pendingJsonDocs.append(jsonDocument);
         }
     }
-    if (cancelUpdate)
-        return;
-    updateInProgress = false;
-    emit remoteSongDbUpdateDone();
+
+    // Kick off the async chain: first clear the remote DB, then send batches.
+    QUrl url(settings.requestServerUrl());
+    QJsonObject mainObject;
+    mainObject.insert("api_key", settings.requestServerApiKey());
+    mainObject.insert("command","clearDatabase");
+    mainObject.insert("system_id", settings.systemId());
+    QJsonDocument jsonDocument;
+    jsonDocument.setObject(mainObject);
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    manager->post(request, jsonDocument.toJson());
 }
 
-bool OKJSongbookAPI::test()
+void OKJSongbookAPI::sendNextSongDbBatch()
+{
+    if (cancelUpdate || m_songDbDocIndex >= m_pendingJsonDocs.size())
+    {
+        updateInProgress = false;
+        m_pendingJsonDocs.clear();
+        m_songDbDocIndex = 0;
+        if (!cancelUpdate)
+            emit remoteSongDbUpdateDone();
+        return;
+    }
+    QNetworkRequest request(QUrl(settings.requestServerUrl()));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    manager->post(request, m_pendingJsonDocs.at(m_songDbDocIndex).toJson());
+    m_songDbDocIndex++;
+}
+
+void OKJSongbookAPI::test()
 {
     QJsonObject mainObject;
     mainObject.insert("api_key", settings.requestServerApiKey());
     mainObject.insert("command","getSerial");
     QJsonDocument jsonDocument;
     jsonDocument.setObject(mainObject);
-    QNetworkAccessManager m_NetworkMngr;
+
+    auto *testManager = new QNetworkAccessManager(this);
+    connect(testManager, &QNetworkAccessManager::sslErrors,
+            this,        &OKJSongbookAPI::onTestSslErrors);
+    connect(testManager, &QNetworkAccessManager::finished,
+            this,        &OKJSongbookAPI::onTestNetworkReply);
 
     QNetworkRequest request(QUrl(settings.requestServerUrl()));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    QNetworkReply *reply = m_NetworkMngr.post(request, jsonDocument.toJson());
-    QEventLoop loop;
-    QObject::connect(reply, SIGNAL(finished()),&loop, SLOT(quit()));
-    loop.exec();
-    if (reply->error() != QNetworkReply::NoError)
-    {
-        qInfo() << "Network error: " << reply->errorString();
-        emit testFailed(reply->errorString());
-        return false;
-    }
-    QByteArray data = reply->readAll();
-    delete reply;
-    QJsonDocument json = QJsonDocument::fromJson(data);
-    qInfo() << json;
-    QString command = json.object().value("command").toString();
-    bool error = json.object().value("error").toBool();
-    qInfo() << "error = " << error;
-    if (json.object().value("errorString").toString() != "")
-    {
-        qInfo() << "Got error json reply";
-        qInfo() << "Error string: " << json.object().value("errorString");
-        emit testFailed(json.object().value("errorString").toString());
-        return false;
-    }
-    if (command == "getSerial")
-    {
-        int newSerial = json.object().value("serial").toInt();
-        if (newSerial != 0)
-        {
-            qInfo() << "SongbookAPI - Server returned good serial";
-            emit testPassed();
-            return true;
-        }
-    }
-    qInfo() << data;
-    emit testFailed("Unknown error");
-    return false;
+    testManager->post(request, jsonDocument.toJson());
 }
 
 void OKJSongbookAPI::alertCheck()
@@ -353,6 +297,46 @@ void OKJSongbookAPI::onTestSslErrors(QNetworkReply *reply, QList<QSslError> erro
         errorText += error.errorString() + "\n";
     }
     emit testSslError(errorText);
+}
+
+void OKJSongbookAPI::onTestNetworkReply(QNetworkReply *reply)
+{
+    // Delete the temporary manager that owns this reply.
+    auto *testManager = qobject_cast<QNetworkAccessManager*>(sender());
+    if (testManager)
+        testManager->deleteLater();
+
+    if (reply->error() != QNetworkReply::NoError)
+    {
+        qInfo() << "Network error: " << reply->errorString();
+        emit testFailed(reply->errorString());
+        reply->deleteLater();
+        return;
+    }
+    QByteArray data = reply->readAll();
+    reply->deleteLater();
+    QJsonDocument json = QJsonDocument::fromJson(data);
+    qInfo() << json;
+    QString command = json.object().value("command").toString();
+    if (json.object().value("errorString").toString() != "")
+    {
+        qInfo() << "Got error json reply";
+        qInfo() << "Error string: " << json.object().value("errorString");
+        emit testFailed(json.object().value("errorString").toString());
+        return;
+    }
+    if (command == "getSerial")
+    {
+        int newSerial = json.object().value("serial").toInt();
+        if (newSerial != 0)
+        {
+            qInfo() << "SongbookAPI - Server returned good serial";
+            emit testPassed();
+            return;
+        }
+    }
+    qInfo() << data;
+    emit testFailed("Unknown error");
 }
 
 void OKJSongbookAPI::onNetworkReply(QNetworkReply *reply)
@@ -479,6 +463,19 @@ void OKJSongbookAPI::onNetworkReply(QNetworkReply *reply)
     {
         refreshRequests();
         refreshVenues();
+    }
+    if (command == "clearDatabase")
+    {
+        qInfo() << "Remote DB cleared, sending song batches";
+        sendNextSongDbBatch();
+    }
+    if (command == "addSongs")
+    {
+        if (updateInProgress)
+        {
+            emit remoteSongDbUpdateProgress(m_songDbDocIndex);
+            sendNextSongDbBatch();
+        }
     }
 }
 

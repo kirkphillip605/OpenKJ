@@ -55,6 +55,8 @@ private:
     bool programIsIdle;
     bool cancelUpdate;
     bool updateInProgress;
+    QList<QJsonDocument> m_pendingJsonDocs;
+    int m_songDbDocIndex{0};
 
 public:
     explicit OKJSongbookAPI(QObject *parent = nullptr);
@@ -63,10 +65,10 @@ public:
     void removeRequest(int requestId);
     bool getAccepting();
     void setAccepting(bool enabled);
-    void refreshVenues(bool blocking = false);
+    void refreshVenues();
     void clearRequests();
     void updateSongDb();
-    bool test();
+    void test();
     void alertCheck();
     void getEntitledSystemCount();
     int entitledSystemCount() { return entitledSystems; }
@@ -97,10 +99,12 @@ private slots:
         void onSslErrors(QNetworkReply * reply, QList<QSslError> errors);
         void onTestSslErrors(QNetworkReply * reply, QList<QSslError> errors);
         void onNetworkReply(QNetworkReply* reply);
+        void onTestNetworkReply(QNetworkReply* reply);
         void timerTimeout();
         void alertTimerTimeout();
         void setInterval(int interval);
         void idleStateChanged(bool isIdle);
+        void sendNextSongDbBatch();
 };
 
 #endif // OKJSONGBOOKAPI_H

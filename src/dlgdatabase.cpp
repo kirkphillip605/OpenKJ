@@ -48,6 +48,9 @@ DlgDatabase::DlgDatabase(QSqlDatabase db, QWidget *parent) :
     dbUpdateDlg = new DlgDbUpdate(this);
     if (settings.dbDirectoryWatchEnabled())
     {
+        m_dirMonitor = new DirectoryMonitor(this);
+        connect(m_dirMonitor, &DirectoryMonitor::databaseUpdateComplete,
+                this,         &DlgDatabase::databaseUpdateComplete);
         QStringList sourceDirs = sourcedirmodel->getSourceDirs();
         QString path;
         foreach (path, sourceDirs)
@@ -55,7 +58,7 @@ DlgDatabase::DlgDatabase(QSqlDatabase db, QWidget *parent) :
             QFileInfo finfo(path);
             if (finfo.isDir() && finfo.isReadable())
             {
-                fsWatcher.addPath(path);
+                m_dirMonitor->addPaths(QStringList{path});
                 qInfo() << "Adding watch to path: " << path;
                 QDirIterator it(path, QDirIterator::Subdirectories);
                 while (it.hasNext()) {
@@ -63,17 +66,17 @@ DlgDatabase::DlgDatabase(QSqlDatabase db, QWidget *parent) :
                     if (!it.fileInfo().isDir() || subPath.endsWith("/.") || subPath.endsWith("/.."))
                         continue;
                     qInfo() << "Adding watch to subpath: " << subPath;
-                    fsWatcher.addPath(subPath);
+                    m_dirMonitor->addPaths(QStringList{subPath});
                 }
             }
         }
-        connect(&fsWatcher, SIGNAL(directoryChanged(QString)), this, SLOT(directoryChanged(QString)));
     }
 }
 
 DlgDatabase::~DlgDatabase()
 {
-    fsWatcher.removePaths(fsWatcher.directories());
+    if (m_dirMonitor)
+        m_dirMonitor->removePaths(m_dirMonitor->directories());
     delete sourcedirmodel;
     delete ui;
 }
@@ -263,8 +266,6 @@ void DlgDatabase::dbupdate_thread_finished()
 }
 
 void DlgDatabase::showDbUpdateErrors(QStringList errors)
-{
-    if (errors.count() > 0)
     {
         QMessageBox msgBox;
         msgBox.setText(tr("Some files were skipped due to problems"));
@@ -309,33 +310,3 @@ void DlgDatabase::on_btnExport_clicked()
     }
 }
 
-void DlgDatabase::directoryChanged(QString dirPath)
-{
-    if (!settings.dbDirectoryWatchEnabled())
-        return;
-    DbUpdateThread *dbthread = new DbUpdateThread(db, this);
-    qInfo() << "Directory changed fired for dir: " << dirPath;
-    QDirIterator it(dirPath);
-    while (it.hasNext()) {
-        QString file = it.next();
-        QFileInfo fi(file);
-        if (fi.isDir())
-            continue;
-        if (file == dirPath + "/." || file == dirPath + "/..")
-            continue;
-        if (fi.suffix().toLower() != "zip" && fi.suffix().toLower() != "cdg")
-        {
-            continue;
-        }
-        if (dbthread->dbEntryExists(file))
-        {
-            continue;
-        }
-        qInfo() << "Detected new file: " << file;
-        qInfo() << "Adding file to the database";
-        dbthread->addSingleTrack(file);
-        emit databaseUpdateComplete();
-    }
-    delete(dbthread);
-
-}
