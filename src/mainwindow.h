@@ -302,6 +302,9 @@ private slots:
 
     void on_sliderBmVolume_valueChanged(int value);
 
+    void applyAppTheme(int themeIndex);
+    void applyTouchFriendly(bool enabled);
+
 protected:
     void closeEvent(QCloseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;

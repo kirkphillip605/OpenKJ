@@ -28,6 +28,7 @@
 #include <QFileDialog>
 #include <QImageReader>
 #include <QDesktopServices>
+#include <QScroller>
 #include "mzarchive.h"
 #include "tagreader.h"
 #include "dlgeditsong.h"
@@ -39,6 +40,7 @@
 #include <algorithm>
 #include "dlgaddsong.h"
 #include "databasemanager.h"
+#include "theme.h"
 
 #ifdef _MSC_VER
 #define NOMINMAX
@@ -526,6 +528,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->labelVolumeBm->setPixmap(QIcon::fromTheme("player-volume").pixmap(QSize(22, 22)));
     updateIcons();
     ui->menuTesting->menuAction()->setVisible(settings.testingEnabled());
+
+    // Apply Modern theme and touch-friendly mode based on saved settings
+    applyAppTheme(settings.appTheme());
+    applyTouchFriendly(settings.touchFriendlyEnabled());
+    connect(&settings, &Settings::appThemeChanged, this, &MainWindow::applyAppTheme);
+    connect(&settings, &Settings::touchFriendlyEnabledChanged, this, &MainWindow::applyTouchFriendly);
 
     connect(ui->tableViewQueue->selectionModel(), &QItemSelectionModel::selectionChanged, [&]() {
         if (ui->tableViewQueue->selectionModel()->selectedRows().empty()) {
@@ -3802,5 +3810,42 @@ void MainWindow::on_actionSong_Shop_triggered() {
     on_pushButtonShop_clicked();
 }
 
+void MainWindow::applyAppTheme(int themeIndex)
+{
+    AppTheme::applyTheme(static_cast<AppTheme::ThemeId>(themeIndex));
+}
 
+void MainWindow::applyTouchFriendly(bool enabled)
+{
+    // List of all main table/list views to configure for touch-friendly mode.
+    const QList<QAbstractItemView *> views {
+        ui->tableViewRotation,
+        ui->tableViewDB,
+        ui->tableViewQueue,
+        ui->tableViewHistory,
+        ui->tableViewBmDb,
+        ui->tableViewBmPlaylist,
+    };
+
+    constexpr int kTouchRowHeight = 44;
+    constexpr int kNormalRowHeight = 22;
+    constexpr int kTouchBtnMinHeight = 44;
+    constexpr int kTouchBtnMinWidth  = 44;
+
+    for (auto *view : views) {
+        if (enabled) {
+            view->verticalHeader()->setDefaultSectionSize(kTouchRowHeight);
+            QScroller::grabGesture(view, QScroller::TouchGesture);
+        } else {
+            view->verticalHeader()->setDefaultSectionSize(kNormalRowHeight);
+            QScroller::ungrabGesture(view);
+        }
+    }
+
+    const auto buttons = findChildren<QPushButton *>();
+    for (auto *btn : buttons) {
+        btn->setMinimumHeight(enabled ? kTouchBtnMinHeight : 0);
+        btn->setMinimumWidth(enabled ? kTouchBtnMinWidth : 0);
+    }
+}
 

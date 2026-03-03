@@ -33,6 +33,7 @@
 #include "idledetect.h"
 #include "runguard/runguard.h"
 #include "okjversion.h"
+#include "theme.h"
 
 QDataStream &operator<<(QDataStream &out, const SfxEntry &obj)
 {
@@ -194,6 +195,9 @@ int main(int argc, char *argv[])
 //    }
     a.setFont(settings.applicationFont(), "QWidget");
     a.setFont(settings.applicationFont(), "QMenu");
+
+    // Apply Modern glass theme QSS if selected (appTheme 1 = Modern)
+    AppTheme::applyTheme(static_cast<AppTheme::ThemeId>(settings.appTheme()));
 
     RunGuard guard("SharedMemorySingleInstanceProtectorOpenKJ");
     if (QCoreApplication::applicationDirPath() == "/app/bin") {

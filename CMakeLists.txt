@@ -30,8 +30,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Disable APIs deprecated before Qt 5.15 to ease the Qt 6 bridge
 add_definitions(-DQT_DISABLE_DEPRECATED_BEFORE=0x050F00)
 
-find_package(QT NAMES Qt5 COMPONENTS Widgets REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Gui Sql Network Widgets Concurrent Svg PrintSupport REQUIRED)
+// Search Qt6 first, then fall back to Qt5 when both are installed.
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Sql Network Widgets Concurrent Svg PrintSupport REQUIRED)
+if(QT_VERSION_MAJOR EQUAL 6)
+    find_package(Qt6 COMPONENTS OpenGLWidgets QUIET)
+    message(STATUS "Building with Qt 6 (${Qt6_VERSION})")
+else()
+    message(STATUS "Building with Qt 5 (${Qt5_VERSION})")
+endif()
 
 include_directories(
         src/
@@ -559,18 +566,20 @@ set(SOURCE_FILES
         src/dlgdebugoutput.cpp
         src/dlgdebugoutput.h
         src/dlgdebugoutput.ui
+        src/theme.cpp
+        src/theme.h
         )
 
 set(LIBRARIES
         spdlog
-        Qt5::Widgets
-        Qt5::Core
-        Qt5::Gui
-        Qt5::Sql
-        Qt5::Network
-        Qt5::Svg
-        Qt5::PrintSupport
-        Qt5::Concurrent
+        Qt${QT_VERSION_MAJOR}::Widgets
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Gui
+        Qt${QT_VERSION_MAJOR}::Sql
+        Qt${QT_VERSION_MAJOR}::Network
+        Qt${QT_VERSION_MAJOR}::Svg
+        Qt${QT_VERSION_MAJOR}::PrintSupport
+        Qt${QT_VERSION_MAJOR}::Concurrent
         )
 
 
@@ -629,9 +638,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             "-F /Library/Frameworks -framework GStreamer"
             )
     if (NOT DEFINED BUILDONLY)
-        get_target_property(_qt5_qmake_location Qt5::qmake IMPORTED_LOCATION)
+        get_target_property(_qt_qmake_location Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
         execute_process(
-                COMMAND "${_qt5_qmake_location}" -query QT_INSTALL_PREFIX
+                COMMAND "${_qt_qmake_location}" -query QT_INSTALL_PREFIX
                 RESULT_VARIABLE return_code
                 OUTPUT_VARIABLE qt5_install_prefix
                 OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -721,9 +730,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     )
 
     if (DEFINED DEPLOY_DEPS)
-        get_target_property(_qt5_qmake_location Qt5::qmake IMPORTED_LOCATION)
+        get_target_property(_qt_qmake_location Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
         execute_process(
-                COMMAND "${_qt5_qmake_location}" -query QT_INSTALL_PREFIX
+                COMMAND "${_qt_qmake_location}" -query QT_INSTALL_PREFIX
                 RESULT_VARIABLE return_code
                 OUTPUT_VARIABLE qt5_install_prefix
                 OUTPUT_STRIP_TRAILING_WHITESPACE
