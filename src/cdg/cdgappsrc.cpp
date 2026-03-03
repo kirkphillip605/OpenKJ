@@ -1,7 +1,7 @@
 #include "cdgappsrc.h"
 #include <gst/app/gstappsrc.h>
 #include "cdg/cdgfilereader.h"
-#include <QMutex>
+#include <QRecursiveMutex>
 #include <QDebug>
 #include <vector>
 #include "xbrz.h"
