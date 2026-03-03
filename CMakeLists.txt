@@ -11,8 +11,6 @@ set(sem_ver "${ver_major}.${ver_minor}.${ver_build}")
 
 message(STATUS "Building OpenKJ ${sem_ver}")
 
-message("Building OpenKJ ${sem_ver}")
-
 project(openkj
         VERSION ${sem_ver}
         LANGUAGES CXX C
@@ -30,6 +28,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Disable APIs deprecated before Qt 5.15 to ease the Qt 6 bridge
 add_definitions(-DQT_DISABLE_DEPRECATED_BEFORE=0x050F00)
 
+# --- Qt Dependency ---
 # Search Qt6 first, then fall back to Qt5 when both are installed.
 find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Sql Network Widgets Concurrent Svg PrintSupport REQUIRED)
@@ -40,34 +39,24 @@ else()
     message(STATUS "Building with Qt 5 (${Qt5_VERSION})")
 endif()
 
-include_directories(
-        src/
-)
+include_directories(src/)
+
+# --- TagLib Dependency (Strictly External) ---
+# We use pkg-config to locate the system TagLib. If not found, we fail immediately.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(TAGLIB IMPORTED_TARGET REQUIRED taglib)
+
+message(STATUS "Using strictly external TagLib found at: ${TAGLIB_LIBRARY_DIRS}")
+include_directories(SYSTEM ${TAGLIB_INCLUDE_DIRS})
+link_directories(${TAGLIB_LIBRARY_DIRS})
+
+# --- OS Specific Dependencies (GStreamer & Spdlog) ---
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-    find_package(PkgConfig)
     pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0 gstreamer-audio-1.0 gstreamer-pbutils-1.0 gstreamer-controller-1.0 gstreamer-video-1.0)
-    include_directories(
-            ${GSTREAMER_INCLUDE_DIRS}
-            ${GLIB_LIBRARY_DIRS}
-    )
-    link_directories(
-            ${GSTREAMER_LIBRARY_DIRS}
-            ${GLIB_INCLUDE_DIRS}
-    )
-    pkg_check_modules(TAGLIB IMPORTED_TARGET taglib)
-    if (TAGLIB_FOUND)
-        message(STATUS "Using OS installed taglib")
-        include_directories(
-                ${TAGLIB_INCLUDE_DIRS}
-        )
-        link_directories(
-                ${TAGLIB_LIBRARY_DIRS}
-        )
-        set(EXTERNAL_TAGLIB True)
-    else ()
-        set(STATIC_TAGLIB True)
-    endif ()
+    include_directories(${GSTREAMER_INCLUDE_DIRS} ${GLIB_LIBRARY_DIRS})
+    link_directories(${GSTREAMER_LIBRARY_DIRS} ${GLIB_INCLUDE_DIRS})
+
     pkg_check_modules(SPDLOG IMPORTED_TARGET spdlog)
     if (SPDLOG_FOUND)
         message(STATUS "Using OS installed spdlog")
@@ -75,330 +64,60 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBS
         link_directories(${SPDLOG_LIBRARY_DIRS})
         include_directories(${SPDLOG_INCLUDE_DIRS})
         set(EXTERNAL_SPDLOG True)
-        #        include_directories(
-        #                ${SPDLOG_INCLUDE_DIRS}
-        #        )
     endif ()
 endif ()
 
 if (NOT EXTERNAL_SPDLOG)
-    message(STATUS "No spdlog install found, pulling it in via CPM")
+    message(STATUS "No OS spdlog install found, pulling it in via CPM")
     include(cmake/CPM.cmake)
     CPMAddPackage("gh:gabime/spdlog@1.8.2")
 endif ()
 
-
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     message("macOS detected")
-    set(STATIC_TAGLIB True)
-    include_directories(
-            /Library/Frameworks/GStreamer.framework/Headers
-    )
-    link_directories(
-            /Library/Frameworks
-    )
+    include_directories(/Library/Frameworks/GStreamer.framework/Headers)
+    link_directories(/Library/Frameworks)
+    
     if (DEFINED BUNDLE_GSTREAMER)
         message("Will bundle GStreamer into the app bundle")
-        add_compile_definitions(
-                MAC_OVERRIDE_GST
-        )
+        add_compile_definitions(MAC_OVERRIDE_GST)
     endif ()
 endif ()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    set(STATIC_TAGLIB True)
     set(WINDOWS_ICON_RC "src/appicon.rc")
-    if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    
+    # Auto-detect architecture for GStreamer paths
+    if(CMAKE_GENERATOR_PLATFORM MATCHES "ARM64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64")
+        set(GST_BASE_PATH "C:/Program Files/gstreamer/1.0/msvc_arm64")
+        set(GST_BASE_PATH_NATIVE "C:\\Program Files\\gstreamer\\1.0\\msvc_arm64")
+    elseif (CMAKE_SIZEOF_VOID_P EQUAL 4)
         set(GST_BASE_PATH "C:/gstreamer/1.0/x86")
         set(GST_BASE_PATH_NATIVE "C:\\gstreamer\\1.0\\x86")
-    elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    else ()
         set(GST_BASE_PATH "C:/gstreamer/1.0/x86_64")
         set(GST_BASE_PATH_NATIVE "C:\\gstreamer\\1.0\\x86_64")
     endif ()
+
     message("Using GST_BASE_PATH: ${GST_BASE_PATH}")
-    message("Using GST_BASE_PATH_NATIVE: ${GST_BASE_PATH_NATIVE}")
     include_directories(
             ${GST_BASE_PATH}/include/gstreamer-1.0
             ${GST_BASE_PATH}/include/glib-2.0
             ${GST_BASE_PATH}/lib/glib-2.0/include
             ${GST_BASE_PATH}/include/glib-2.0/gobject
     )
-    link_directories(
-            "${GST_BASE_PATH}/lib"
-    )
-    add_compile_definitions(
-            MINIZ_NO_TIME
-    )
+    link_directories("${GST_BASE_PATH}/lib")
+    add_compile_definitions(MINIZ_NO_TIME)
 
-    link_libraries(
-            gstreamer-1.0
-            glib-2.0
-            gobject-2.0
-            gstbase-1.0
-            gstapp-1.0
-            gstaudio-1.0
-            gstpbutils-1.0
-            gstcontroller-1.0
-            gstvideo-1.0
-            winmm
+    set(GSTREAMER_LIBRARIES
+            gstreamer-1.0 glib-2.0 gobject-2.0 gstbase-1.0
+            gstapp-1.0 gstaudio-1.0 gstpbutils-1.0
+            gstcontroller-1.0 gstvideo-1.0 winmm
     )
-
 endif ()
 
-if (STATIC_TAGLIB)
-    message("Building using included taglib")
-    add_compile_definitions(
-            TAGLIB_STATIC
-    )
-    include_directories(
-            src/taglib
-            src/taglib/toolkit
-            src/taglib/mpeg/id3v2
-            src/taglib/mpeg/id3v2/frames
-            src/taglib/mpeg/id3v1
-            src/taglib/mod
-            src/taglib/ogg
-            src/taglib/ogg/flac
-            src/taglib/ogg/opus
-            src/taglib/ogg/speex
-            src/taglib/ogg/vorbis
-            src/taglib/flac
-            src/taglib/ape
-            src/taglib/riff
-            src/taglib/asf
-            src/taglib/mpeg
-            src/taglib/riff
-            src/taglib/riff/aiff
-            src/taglib/riff/wav
-            src/taglib/it
-            src/taglib/mp4
-            src/taglib/mpc
-            src/taglib/s3m
-            src/taglib/trueaudio
-            src/taglib/wavpack
-            src/taglib/xm
-    )
-    set(TAGLIB_SOURCES
-            src/taglib/ape/apefile.cpp
-            src/taglib/ape/apefooter.cpp
-            src/taglib/ape/apeitem.cpp
-            src/taglib/ape/apeproperties.cpp
-            src/taglib/ape/apetag.cpp
-            src/taglib/asf/asfattribute.cpp
-            src/taglib/asf/asffile.cpp
-            src/taglib/asf/asfpicture.cpp
-            src/taglib/asf/asfproperties.cpp
-            src/taglib/asf/asftag.cpp
-            src/taglib/flac/flacfile.cpp
-            src/taglib/flac/flacmetadatablock.cpp
-            src/taglib/flac/flacpicture.cpp
-            src/taglib/flac/flacproperties.cpp
-            src/taglib/flac/flacunknownmetadatablock.cpp
-            src/taglib/it/itfile.cpp
-            src/taglib/it/itproperties.cpp
-            src/taglib/mod/modfile.cpp
-            src/taglib/mod/modfilebase.cpp
-            src/taglib/mod/modproperties.cpp
-            src/taglib/mod/modtag.cpp
-            src/taglib/mp4/mp4atom.cpp
-            src/taglib/mp4/mp4coverart.cpp
-            src/taglib/mp4/mp4file.cpp
-            src/taglib/mp4/mp4item.cpp
-            src/taglib/mp4/mp4properties.cpp
-            src/taglib/mp4/mp4tag.cpp
-            src/taglib/mpc/mpcfile.cpp
-            src/taglib/mpc/mpcproperties.cpp
-            src/taglib/mpeg/id3v1/id3v1genres.cpp
-            src/taglib/mpeg/id3v1/id3v1tag.cpp
-            src/taglib/mpeg/id3v2/frames/attachedpictureframe.cpp
-            src/taglib/mpeg/id3v2/frames/chapterframe.cpp
-            src/taglib/mpeg/id3v2/frames/commentsframe.cpp
-            src/taglib/mpeg/id3v2/frames/eventtimingcodesframe.cpp
-            src/taglib/mpeg/id3v2/frames/generalencapsulatedobjectframe.cpp
-            src/taglib/mpeg/id3v2/frames/ownershipframe.cpp
-            src/taglib/mpeg/id3v2/frames/podcastframe.cpp
-            src/taglib/mpeg/id3v2/frames/popularimeterframe.cpp
-            src/taglib/mpeg/id3v2/frames/privateframe.cpp
-            src/taglib/mpeg/id3v2/frames/relativevolumeframe.cpp
-            src/taglib/mpeg/id3v2/frames/synchronizedlyricsframe.cpp
-            src/taglib/mpeg/id3v2/frames/tableofcontentsframe.cpp
-            src/taglib/mpeg/id3v2/frames/textidentificationframe.cpp
-            src/taglib/mpeg/id3v2/frames/uniquefileidentifierframe.cpp
-            src/taglib/mpeg/id3v2/frames/unknownframe.cpp
-            src/taglib/mpeg/id3v2/frames/unsynchronizedlyricsframe.cpp
-            src/taglib/mpeg/id3v2/frames/urllinkframe.cpp
-            src/taglib/mpeg/id3v2/id3v2extendedheader.cpp
-            src/taglib/mpeg/id3v2/id3v2footer.cpp
-            src/taglib/mpeg/id3v2/id3v2frame.cpp
-            src/taglib/mpeg/id3v2/id3v2framefactory.cpp
-            src/taglib/mpeg/id3v2/id3v2header.cpp
-            src/taglib/mpeg/id3v2/id3v2synchdata.cpp
-            src/taglib/mpeg/id3v2/id3v2tag.cpp
-            src/taglib/mpeg/mpegfile.cpp
-            src/taglib/mpeg/mpegheader.cpp
-            src/taglib/mpeg/mpegproperties.cpp
-            src/taglib/mpeg/xingheader.cpp
-            src/taglib/ogg/flac/oggflacfile.cpp
-            src/taglib/ogg/opus/opusfile.cpp
-            src/taglib/ogg/opus/opusproperties.cpp
-            src/taglib/ogg/speex/speexfile.cpp
-            src/taglib/ogg/speex/speexproperties.cpp
-            src/taglib/ogg/vorbis/vorbisfile.cpp
-            src/taglib/ogg/vorbis/vorbisproperties.cpp
-            src/taglib/ogg/oggfile.cpp
-            src/taglib/ogg/oggpage.cpp
-            src/taglib/ogg/oggpageheader.cpp
-            src/taglib/ogg/xiphcomment.cpp
-            src/taglib/riff/aiff/aifffile.cpp
-            src/taglib/riff/aiff/aiffproperties.cpp
-            src/taglib/riff/wav/infotag.cpp
-            src/taglib/riff/wav/wavfile.cpp
-            src/taglib/riff/wav/wavproperties.cpp
-            src/taglib/riff/rifffile.cpp
-            src/taglib/s3m/s3mfile.cpp
-            src/taglib/s3m/s3mproperties.cpp
-            src/taglib/toolkit/tbytevector.cpp
-            src/taglib/toolkit/tbytevectorlist.cpp
-            src/taglib/toolkit/tbytevectorstream.cpp
-            src/taglib/toolkit/tdebug.cpp
-            src/taglib/toolkit/tdebuglistener.cpp
-            src/taglib/toolkit/tfile.cpp
-            src/taglib/toolkit/tfilestream.cpp
-            src/taglib/toolkit/tiostream.cpp
-            src/taglib/toolkit/tpropertymap.cpp
-            src/taglib/toolkit/trefcounter.cpp
-            src/taglib/toolkit/tstring.cpp
-            src/taglib/toolkit/tstringlist.cpp
-            src/taglib/toolkit/tzlib.cpp
-            src/taglib/toolkit/unicode.cpp
-            src/taglib/trueaudio/trueaudiofile.cpp
-            src/taglib/trueaudio/trueaudioproperties.cpp
-            src/taglib/wavpack/wavpackfile.cpp
-            src/taglib/wavpack/wavpackproperties.cpp
-            src/taglib/xm/xmfile.cpp
-            src/taglib/xm/xmproperties.cpp
-            src/taglib/audioproperties.cpp
-            src/taglib/fileref.cpp
-            src/taglib/tag.cpp
-            src/taglib/tagunion.cpp
-            src/taglib/tagutils.cpp
-            src/taglib/ape/apefile.h
-            src/taglib/ape/apefooter.h
-            src/taglib/ape/apeitem.h
-            src/taglib/ape/apeproperties.h
-            src/taglib/ape/apetag.h
-            src/taglib/asf/asfattribute.h
-            src/taglib/asf/asffile.h
-            src/taglib/asf/asfpicture.h
-            src/taglib/asf/asfproperties.h
-            src/taglib/asf/asftag.h
-            src/taglib/asf/asfutils.h
-            src/taglib/flac/flacfile.h
-            src/taglib/flac/flacmetadatablock.h
-            src/taglib/flac/flacpicture.h
-            src/taglib/flac/flacproperties.h
-            src/taglib/flac/flacunknownmetadatablock.h
-            src/taglib/it/itfile.h
-            src/taglib/it/itproperties.h
-            src/taglib/mod/modfile.h
-            src/taglib/mod/modfilebase.h
-            src/taglib/mod/modfileprivate.h
-            src/taglib/mod/modproperties.h
-            src/taglib/mod/modtag.h
-            src/taglib/mp4/mp4atom.h
-            src/taglib/mp4/mp4coverart.h
-            src/taglib/mp4/mp4file.h
-            src/taglib/mp4/mp4item.h
-            src/taglib/mp4/mp4properties.h
-            src/taglib/mp4/mp4tag.h
-            src/taglib/mpc/mpcfile.h
-            src/taglib/mpc/mpcproperties.h
-            src/taglib/mpeg/id3v1/id3v1genres.h
-            src/taglib/mpeg/id3v1/id3v1tag.h
-            src/taglib/mpeg/id3v2/frames/attachedpictureframe.h
-            src/taglib/mpeg/id3v2/frames/chapterframe.h
-            src/taglib/mpeg/id3v2/frames/commentsframe.h
-            src/taglib/mpeg/id3v2/frames/eventtimingcodesframe.h
-            src/taglib/mpeg/id3v2/frames/generalencapsulatedobjectframe.h
-            src/taglib/mpeg/id3v2/frames/ownershipframe.h
-            src/taglib/mpeg/id3v2/frames/podcastframe.h
-            src/taglib/mpeg/id3v2/frames/popularimeterframe.h
-            src/taglib/mpeg/id3v2/frames/privateframe.h
-            src/taglib/mpeg/id3v2/frames/relativevolumeframe.h
-            src/taglib/mpeg/id3v2/frames/synchronizedlyricsframe.h
-            src/taglib/mpeg/id3v2/frames/tableofcontentsframe.h
-            src/taglib/mpeg/id3v2/frames/textidentificationframe.h
-            src/taglib/mpeg/id3v2/frames/uniquefileidentifierframe.h
-            src/taglib/mpeg/id3v2/frames/unknownframe.h
-            src/taglib/mpeg/id3v2/frames/unsynchronizedlyricsframe.h
-            src/taglib/mpeg/id3v2/frames/urllinkframe.h
-            src/taglib/mpeg/id3v2/id3v2extendedheader.h
-            src/taglib/mpeg/id3v2/id3v2footer.h
-            src/taglib/mpeg/id3v2/id3v2frame.h
-            src/taglib/mpeg/id3v2/id3v2framefactory.h
-            src/taglib/mpeg/id3v2/id3v2header.h
-            src/taglib/mpeg/id3v2/id3v2synchdata.h
-            src/taglib/mpeg/id3v2/id3v2tag.h
-            src/taglib/mpeg/mpegfile.h
-            src/taglib/mpeg/mpegheader.h
-            src/taglib/mpeg/mpegproperties.h
-            src/taglib/mpeg/mpegutils.h
-            src/taglib/mpeg/xingheader.h
-            src/taglib/ogg/flac/oggflacfile.h
-            src/taglib/ogg/opus/opusfile.h
-            src/taglib/ogg/opus/opusproperties.h
-            src/taglib/ogg/speex/speexfile.h
-            src/taglib/ogg/speex/speexproperties.h
-            src/taglib/ogg/vorbis/vorbisfile.h
-            src/taglib/ogg/vorbis/vorbisproperties.h
-            src/taglib/ogg/oggfile.h
-            src/taglib/ogg/oggpage.h
-            src/taglib/ogg/oggpageheader.h
-            src/taglib/ogg/xiphcomment.h
-            src/taglib/riff/aiff/aifffile.h
-            src/taglib/riff/aiff/aiffproperties.h
-            src/taglib/riff/wav/infotag.h
-            src/taglib/riff/wav/wavfile.h
-            src/taglib/riff/wav/wavproperties.h
-            src/taglib/riff/rifffile.h
-            src/taglib/riff/riffutils.h
-            src/taglib/s3m/s3mfile.h
-            src/taglib/s3m/s3mproperties.h
-            src/taglib/toolkit/taglib.h
-            src/taglib/toolkit/tbytevector.h
-            src/taglib/toolkit/tbytevectorlist.h
-            src/taglib/toolkit/tbytevectorstream.h
-            src/taglib/toolkit/tdebug.h
-            src/taglib/toolkit/tdebuglistener.h
-            src/taglib/toolkit/tfile.h
-            src/taglib/toolkit/tfilestream.h
-            src/taglib/toolkit/tiostream.h
-            src/taglib/toolkit/tlist.h
-            src/taglib/toolkit/tmap.h
-            src/taglib/toolkit/tpropertymap.h
-            src/taglib/toolkit/trefcounter.h
-            src/taglib/toolkit/tstring.h
-            src/taglib/toolkit/tstringlist.h
-            src/taglib/toolkit/tutils.h
-            src/taglib/toolkit/tzlib.h
-            src/taglib/toolkit/unicode.h
-            src/taglib/trueaudio/trueaudiofile.h
-            src/taglib/trueaudio/trueaudioproperties.h
-            src/taglib/wavpack/wavpackfile.h
-            src/taglib/wavpack/wavpackproperties.h
-            src/taglib/xm/xmfile.h
-            src/taglib/xm/xmproperties.h
-            src/taglib/audioproperties.h
-            src/taglib/fileref.h
-            src/taglib/tag.h
-            src/taglib/taglib_export.h
-            src/taglib/tagunion.h
-            src/taglib/tagutils.h
-            )
-endif ()
-
+# --- Project Source Files (Internal TagLib directory entirely purged) ---
 set(SOURCE_FILES
-        ${TAGLIB_SOURCES}
         src/miniz/miniz.h
         src/miniz/miniz.c
         src/main.cpp
@@ -570,8 +289,10 @@ set(SOURCE_FILES
         src/theme.h
         )
 
+# --- Libraries ---
 set(LIBRARIES
         spdlog
+        PkgConfig::TAGLIB
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Gui
@@ -582,50 +303,28 @@ set(LIBRARIES
         Qt${QT_VERSION_MAJOR}::Concurrent
         )
 
+# --- Target Execution & Deployment ---
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-
-    if (EXTERNAL_TAGLIB)
-        list(APPEND LIBRARIES "PkgConfig::TAGLIB")
-    endif ()
-
     if (EXTERNAL_SPDLOG)
         list(APPEND LIBRARIES "PkgConfig::SPDLOG")
     endif ()
 
-    add_executable(openkj
-            ${SOURCE_FILES}
-            )
-    target_link_libraries(openkj PRIVATE ${LIBRARIES} ${GSTREAMER_LIBRARIES})
+    add_executable(openkj ${SOURCE_FILES})
+    target_link_libraries(openkj ${LIBRARIES} ${GSTREAMER_LIBRARIES})
 
-    install(
-            TARGETS openkj
-            DESTINATION bin
-    )
-    install(
-            FILES src/Icons/org.openkj.OpenKJ.svg
-            DESTINATION share/icons/hicolor/scalable/apps
-    )
-    install(
-            FILES src/org.openkj.OpenKJ.desktop
-            DESTINATION share/applications
-    )
-    install(
-            FILES src/org.openkj.OpenKJ.metainfo.xml
-            DESTINATION share/metainfo
-    )
+    install(TARGETS openkj DESTINATION bin)
+    install(FILES src/Icons/org.openkj.OpenKJ.svg DESTINATION share/icons/hicolor/scalable/apps)
+    install(FILES src/org.openkj.OpenKJ.desktop DESTINATION share/applications)
+    install(FILES src/org.openkj.OpenKJ.metainfo.xml DESTINATION share/metainfo)
 endif ()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(openkj_ICON ${CMAKE_CURRENT_SOURCE_DIR}/src/Icons/OpenKJ.icns)
-    set_source_files_properties(${openkj_ICON} PROPERTIES
-            MACOSX_PACKAGE_LOCATION "Resources"
-            )
-    add_executable(openkj
-            MACOSX_BUNDLE
-            ${openkj_ICON}
-            ${SOURCE_FILES}
-            )
+    set_source_files_properties(${openkj_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+    
+    add_executable(openkj MACOSX_BUNDLE ${openkj_ICON} ${SOURCE_FILES})
+    
     set_target_properties(openkj PROPERTIES
             BUNDLE True
             MACOSX_BUNDLE_GUI_IDENTIFIER org.openkj.openkj
@@ -633,10 +332,12 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             MACOSX_BUNDLE_BUNDLE_VERSION ${sem_ver}
             MACOSX_BUNDLE_ICON_FILE OpenKJ.icns
             )
+            
     target_link_libraries(openkj PRIVATE
             ${LIBRARIES}
             "-F /Library/Frameworks -framework GStreamer"
             )
+            
     if (NOT DEFINED BUILDONLY)
         get_target_property(_qt_qmake_location Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
         execute_process(
@@ -671,6 +372,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         else ()
             message("QT_INSTALL_DIR not defined")
         endif ()
+        
         if (DEFINED BUNDLE_GSTREAMER)
             message("Installing GStreamer framework into app bundle")
             install(
@@ -680,54 +382,22 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
             add_custom_command(
                     TARGET openkj
                     POST_BUILD
-                    COMMAND "cp"
-                    ARGS
-                    "-pR"
-                    "/Library/Frameworks/GStreamer.framework.dist"
-                    "openkj.app/Contents/Frameworks/GStreamer.framework"
-                    COMMAND "osxrelocator"
-                    ARGS
-                    "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/lib"
-                    "/Library/Frameworks/GStreamer.framework/"
-                    "@executable_path/../Frameworks/GStreamer.framework/"
-                    "-r"
-                    USES_TERMINAL
-                    COMMAND "osxrelocator"
-                    ARGS
-                    "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/libexec"
-                    "/Library/Frameworks/GStreamer.framework/"
-                    "@executable_path/../../../../../../Frameworks/GStreamer.framework/"
-                    "-r"
-                    USES_TERMINAL
-                    COMMAND "osxrelocator"
-                    ARGS
-                    "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/bin"
-                    "/Library/Frameworks/GStreamer.framework/"
-                    "@executable_path/../../../../Frameworks/GStreamer.framework/"
-                    "-r"
-                    USES_TERMINAL
-                    COMMAND "osxrelocator"
-                    ARGS
-                    "openkj.app/Contents/MacOS"
-                    "/Library/Frameworks/GStreamer.framework/"
-                    "@executable_path/../Frameworks/GStreamer.framework/"
-                    "-r"
-                    USES_TERMINAL
+                    COMMAND "cp" ARGS "-pR" "/Library/Frameworks/GStreamer.framework.dist" "openkj.app/Contents/Frameworks/GStreamer.framework"
+                    COMMAND "osxrelocator" ARGS "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/lib" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
+                    COMMAND "osxrelocator" ARGS "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/libexec" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../../../../../../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
+                    COMMAND "osxrelocator" ARGS "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/bin" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../../../../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
+                    COMMAND "osxrelocator" ARGS "openkj.app/Contents/MacOS" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
             )
         endif ()
     endif ()
 endif ()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    add_executable(openkj
-            ${SOURCE_FILES}
-            ${WINDOWS_ICON_RC}
-            )
-    target_link_libraries(openkj PRIVATE ${LIBRARIES})
-    set_property(
-            TARGET openkj
-            PROPERTY WIN32_EXECUTABLE true
-    )
+    add_executable(openkj ${SOURCE_FILES} ${WINDOWS_ICON_RC})
+    
+    target_link_libraries(openkj PRIVATE ${LIBRARIES} ${GSTREAMER_LIBRARIES})
+    
+    set_property(TARGET openkj PROPERTY WIN32_EXECUTABLE true)
 
     if (DEFINED DEPLOY_DEPS)
         get_target_property(_qt_qmake_location Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
@@ -754,12 +424,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
         endif ()
         add_custom_command(
                 TARGET openkj
-                COMMAND "xcopy"
-                ARGS "${GST_BASE_PATH_NATIVE}\\*" "/s" "/y"
-                COMMAND "xcopy"
-                ARGS "${GST_BASE_PATH_NATIVE}\\bin\\*.dll" "/y"
+                COMMAND "xcopy" ARGS "${GST_BASE_PATH_NATIVE}\\*" "/s" "/y"
+                COMMAND "xcopy" ARGS "${GST_BASE_PATH_NATIVE}\\bin\\*.dll" "/y"
         )
     endif ()
 endif ()
-
-
