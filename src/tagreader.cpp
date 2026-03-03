@@ -103,7 +103,7 @@ void TagReader::setMedia(QString path)
 void TagReader::taglibTags(QString path)
 {
     TagLib::FileRef f(path.toLocal8Bit().data());
-    if (f.isValid())
+    if (!f.isNull())
     {
         m_artist = f.tag()->artist().toCString(true);
         m_title = f.tag()->title().toCString(true);
