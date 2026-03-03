@@ -1551,7 +1551,7 @@ void MainWindow::on_tableViewRotation_customContextMenuRequested(const QPoint &p
         m_rtClickRotationSingerId = index.data(Qt::UserRole).toInt();
         QMenu contextMenu(this);
         if (ui->tableViewRotation->selectionModel()->selectedRows().size() > 1) {
-            contextMenu.addAction("Delete", scutDeleteSinger, &QShortcut::activated);
+            contextMenu.addAction("Delete", m_shortcutManager->deleteSingerShortcut(), &QShortcut::activated);
         } else {
             contextMenu.addAction("Rename", this, &MainWindow::renameSinger);
         }
@@ -1586,7 +1586,7 @@ void MainWindow::renameSinger() {
 
 void MainWindow::on_tableViewBmPlaylist_customContextMenuRequested([[maybe_unused]]const QPoint &pos) {
     QMenu contextMenu(this);
-    contextMenu.addAction("Delete", scutDeletePlSong, &QShortcut::activated);
+    contextMenu.addAction("Delete", m_shortcutManager->deletePlSongShortcut(), &QShortcut::activated);
     contextMenu.exec(QCursor::pos());
 }
 
@@ -1604,7 +1604,7 @@ void MainWindow::on_tableViewQueue_customContextMenuRequested(const QPoint &pos)
             contextMenu.addAction("Set Key Change", this, &MainWindow::setKeyChange);
             contextMenu.addAction("Toggle played", this, &MainWindow::toggleQueuePlayed);
             contextMenu.addSeparator();
-            contextMenu.addAction("Delete", scutDeleteSong, &QShortcut::activated);
+            contextMenu.addAction("Delete", m_shortcutManager->deleteSongShortcut(), &QShortcut::activated);
             contextMenu.exec(QCursor::pos());
         }
     } else if (selCount > 1) {
@@ -1612,7 +1612,7 @@ void MainWindow::on_tableViewQueue_customContextMenuRequested(const QPoint &pos)
         contextMenu.addAction("Set Played", this, &MainWindow::setMultiPlayed);
         contextMenu.addAction("Set Unplayed", this, &MainWindow::setMultiUnplayed);
         contextMenu.addSeparator();
-        contextMenu.addAction("Delete", scutDeleteSong, &QShortcut::activated);
+        contextMenu.addAction("Delete", m_shortcutManager->deleteSongShortcut(), &QShortcut::activated);
 
         contextMenu.exec(QCursor::pos());
     }

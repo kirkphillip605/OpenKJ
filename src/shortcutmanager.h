@@ -41,6 +41,10 @@ public:
     // Re-apply key sequences from settings (called when shortcuts change).
     void updateShortcuts();
 
+    QShortcut *deleteSingerShortcut() const { return scutDeleteSinger; }
+    QShortcut *deleteSongShortcut() const { return scutDeleteSong; }
+    QShortcut *deletePlSongShortcut() const { return scutDeletePlSong; }
+
 private:
     MainWindow *m_mainWindow;
 

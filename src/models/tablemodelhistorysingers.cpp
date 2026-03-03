@@ -51,11 +51,11 @@ QVariant TableModelHistorySingers::data(const QModelIndex &index, int role) cons
     {
         switch (index.column()) {
         case 2:
-            return Qt::AlignRight + Qt::AlignVCenter;
+            return Qt::AlignRight | Qt::AlignVCenter;
         case 3:
-            return Qt::AlignHCenter + Qt::AlignVCenter;
+            return Qt::AlignHCenter | Qt::AlignVCenter;
         case 4:
-            return Qt::AlignHCenter + Qt::AlignVCenter;
+            return Qt::AlignHCenter | Qt::AlignVCenter;
         }
     }
     if (role == Qt::DisplayRole)
