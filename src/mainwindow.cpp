@@ -187,7 +187,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->sliderBmVolume->setMaximumWidth(12);
     ui->sliderProgress->setMaximumHeight(12);
 #endif
-    QDir okjDataDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation));
+    QDir okjDataDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
     if (!okjDataDir.exists()) {
         okjDataDir.mkpath(okjDataDir.absolutePath());
     }
@@ -3833,13 +3833,14 @@ void MainWindow::applyTouchFriendly(bool enabled)
     constexpr int kTouchBtnMinWidth  = 44;
 
     for (auto *view : views) {
-        if (enabled) {
-            view->verticalHeader()->setDefaultSectionSize(kTouchRowHeight);
+        auto *tableView = qobject_cast<QTableView *>(view);
+        const int rowHeight = enabled ? kTouchRowHeight : kNormalRowHeight;
+        if (tableView)
+            tableView->verticalHeader()->setDefaultSectionSize(rowHeight);
+        if (enabled)
             QScroller::grabGesture(view, QScroller::TouchGesture);
-        } else {
-            view->verticalHeader()->setDefaultSectionSize(kNormalRowHeight);
+        else
             QScroller::ungrabGesture(view);
-        }
     }
 
     const auto buttons = findChildren<QPushButton *>();

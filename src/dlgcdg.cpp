@@ -488,7 +488,7 @@ TransparentWidget::~TransparentWidget()
 
 void TransparentWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    this->move(event->globalPos() + m_startPoint);
+    this->move(event->globalPosition().toPoint() + m_startPoint);
     settings.setDurationPosition(this->pos());
 }
 

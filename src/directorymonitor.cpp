@@ -26,6 +26,7 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QSqlDatabase>
+#include <QSqlError>
 #include <QSqlQuery>
 #include <QtConcurrent>
 #include <atomic>
@@ -81,7 +82,7 @@ void DirectoryMonitor::onDirectoryChanged(const QString &path)
     const QString dbPath = QSqlDatabase::database().databaseName();
 
     // Run the heavy work (tag parsing + DB insert) on a thread-pool thread.
-    QtConcurrent::run([this, candidates, dbPath]() {
+    [[maybe_unused]] auto future = QtConcurrent::run([this, candidates, dbPath]() {
         static std::atomic<int> s_counter{0};
         const QString connName =
             QStringLiteral("dirmon_%1").arg(s_counter.fetch_add(1));

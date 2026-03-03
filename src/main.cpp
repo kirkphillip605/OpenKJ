@@ -131,9 +131,7 @@ int main(int argc, char *argv[])
     //QLoggingCategory::setFilterRules("*.debug=true");
     qInstallMessageHandler(myMessageOutput);
     qRegisterMetaType<SfxEntry>("SfxEntry");
-    qRegisterMetaTypeStreamOperators<SfxEntry>("SfxEntry");
     qRegisterMetaType<QList<SfxEntry> >("QList<SfxEntry>");
-    qRegisterMetaTypeStreamOperators<QList<SfxEntry> >("QList<SfxEntry>");
     QApplication a(argc, argv);
     parser.process(a);
     if (parser.isSet(dataDirectoryOption))
@@ -158,7 +156,6 @@ int main(int argc, char *argv[])
     filter = new IdleDetect;
     a.installEventFilter(filter);
     qputenv("GST_DEBUG", "*:3");
-    QGuiApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     if (settings.theme() == 1)
     {
         QPalette palette;
