@@ -195,7 +195,7 @@ QStringList DlgRegularImport::loadSingerList(const QString &filename)
     m_curImportFile = filename;
     QStringList singers;
     QFile importFile(filename);
-    importFile.open(QFile::ReadOnly);
+    (void)importFile.open(QFile::ReadOnly);
     auto contents = importFile.readAll();
     auto jDoc = QJsonDocument::fromJson(contents);
     auto array = jDoc.array();
@@ -287,7 +287,7 @@ QStringList DlgRegularImport::importSinger(const QString &name)
 {
     QStringList missingFiles;
     QFile importFile(m_curImportFile);
-    importFile.open(QFile::ReadOnly);
+    (void)importFile.open(QFile::ReadOnly);
     auto contents = importFile.readAll();
     auto jDoc = QJsonDocument::fromJson(contents);
     auto array = jDoc.array();

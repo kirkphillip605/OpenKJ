@@ -162,7 +162,7 @@ QVariant TableModelRotation::data(const QModelIndex &index, int role) const
         return m_iconYellowCircle;
     }
     if (role == Qt::TextAlignmentRole && index.column() == COL_ID)
-        return Qt::AlignCenter;
+        return int(Qt::AlignCenter);
     if (role == Qt::BackgroundRole && m_singers.at(index.row()).id == m_currentSingerId)
     {
         if (index.column() > 0)

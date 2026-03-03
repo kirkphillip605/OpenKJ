@@ -139,7 +139,7 @@ void DlgRegularExport::exportSingers(const std::vector<int> &historySingerIds, c
          jSinger.insert("songs", jSongs);
          jArr.append(jSinger);
     });
-    outfile.open(QFile::WriteOnly);
+    (void)outfile.open(QFile::WriteOnly);
     QJsonDocument jDoc(jArr);
     outfile.write(jDoc.toJson(QJsonDocument::Indented));
     outfile.close();

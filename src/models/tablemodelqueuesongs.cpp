@@ -76,9 +76,9 @@ QVariant TableModelQueueSongs::data(const QModelIndex &index, int role) const
     if (role == Qt::TextAlignmentRole)
     {
         if (index.column() == COL_KEY)
-            return Qt::AlignHCenter | Qt::AlignVCenter;
+            return int(Qt::AlignHCenter | Qt::AlignVCenter);
         if (index.column() == COL_DURATION)
-            return Qt::AlignRight | Qt::AlignVCenter;
+            return int(Qt::AlignRight | Qt::AlignVCenter);
     }
     if (role == Qt::DisplayRole)
     {

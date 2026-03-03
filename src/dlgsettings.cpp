@@ -224,7 +224,7 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
     connect(ui->checkBoxLogging, &QCheckBox::toggled, &settings, &Settings::setLogEnabled);
     connect(ui->checkBoxTreatAllSingersAsRegs, &QAbstractButton::toggled, &settings,
             &Settings::setTreatAllSingersAsRegs);
-    connect(ui->checkBoxShowAddDlgOnDbDblclk, &QCheckBox::stateChanged, [&](auto state) {
+    connect(ui->checkBoxShowAddDlgOnDbDblclk, &QCheckBox::checkStateChanged, [&](auto state) {
         if (state == 0)
             settings.setDbDoubleClickAddsSong(false);
         else

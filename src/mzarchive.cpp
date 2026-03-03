@@ -81,7 +81,7 @@ QByteArray MzArchive::getCDGData()
         if (mz_zip_reader_extract_file_to_file(&archive, cdgFileName.toLocal8Bit(), cdgTmpFile.toLocal8Bit(),0))
         {
             QFile cdg(cdgTmpFile);
-            cdg.open(QFile::ReadOnly);
+            (void)cdg.open(QFile::ReadOnly);
             data = cdg.readAll();
             mz_zip_reader_end(&archive);
             return data;
@@ -160,7 +160,7 @@ QByteArray MzArchive::extractAudioToMemory()
     mz_zip_archive archive;
     memset(&archive, 0, sizeof(archive));
     QFile zipFile(archiveFile);
-    zipFile.open(QIODevice::ReadOnly);
+    (void)zipFile.open(QIODevice::ReadOnly);
     QByteArray zipData = zipFile.readAll();
     zipFile.close();
     if (!mz_zip_reader_init_mem(&archive, zipData.data(), zipData.size(), 0))
@@ -198,7 +198,7 @@ bool MzArchive::extractAudio(QString destPath, QString destFile)
         memset(&archive, 0, sizeof(archive));
         //mz_zip_reader_init_file(&archive, archiveFile.toLocal8Bit(), 0);
         QFile zipFile(archiveFile);
-        zipFile.open(QIODevice::ReadOnly);
+        (void)zipFile.open(QIODevice::ReadOnly);
         QByteArray zipData = zipFile.readAll();
         zipFile.close();
         mz_zip_reader_init_mem(&archive, zipData.data(), zipData.size(), 0);
@@ -231,7 +231,7 @@ bool MzArchive::extractCdg(QString destPath, QString destFile)
         mz_zip_archive archive;
         memset(&archive, 0, sizeof(archive));
         QFile zipFile(archiveFile);
-        zipFile.open(QIODevice::ReadOnly);
+        (void)zipFile.open(QIODevice::ReadOnly);
         QByteArray zipData = zipFile.readAll();
         zipFile.close();
         mz_zip_reader_init_mem(&archive, zipData.data(), zipData.size(), 0);

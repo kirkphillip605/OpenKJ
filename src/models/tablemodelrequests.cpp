@@ -84,9 +84,9 @@ QVariant TableModelRequests::data(const QModelIndex &index, int role) const
         switch(index.column())
         {
         case KEYCHG:
-            return Qt::AlignCenter;
+            return int(Qt::AlignCenter);
         default:
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft);
         }
     if(role == Qt::DisplayRole || role == Qt::ToolTipRole)
     {
