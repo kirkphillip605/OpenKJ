@@ -98,7 +98,7 @@ void SongShop::downloadFile(const QString &url, const QString &destFn)
     connect(reply, SIGNAL(downloadProgress(qint64,qint64)), this, SLOT(onDownloadProgress(qint64,qint64)));
     loop.exec();
     QUrl aUrl(url);
-    QFileInfo fileInfo=aUrl.path();
+    QFileInfo fileInfo(aUrl.path());
     QFile file(destPath);
     file.open(QIODevice::WriteOnly);
     file.write(reply->readAll());

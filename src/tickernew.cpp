@@ -1,5 +1,7 @@
 #include "tickernew.h"
 
+#include <QFile>
+#include <QTextStream>
 #include <QPainter>
 #include <QFontMetrics>
 #include <QDebug>
