@@ -45,7 +45,7 @@ QString itemText = view->model()->data(index).toString();
 
 if ((itemTextWidth > rectWidth) && !itemTooltip.isEmpty())
  {
- QToolTip::showText(helpEvent->globalPosition().toPoint(), itemTooltip, view, rect);
+ QToolTip::showText(helpEvent->globalPos(), itemTooltip, view, rect);
  }
  else
  {

@@ -103,7 +103,7 @@ void TagReader::setMedia(QString path)
 void TagReader::taglibTags(QString path)
 {
     TagLib::FileRef f(path.toLocal8Bit().data());
-    if (!f.isNull())
+    if (f.isValid())
     {
         m_artist = f.tag()->artist().toCString(true);
         m_title = f.tag()->title().toCString(true);
@@ -138,7 +138,7 @@ void TagReader::setMediaFromBuffer(const QByteArray &data, const QString &extens
     TagLib::ByteVector bv(data.constData(), static_cast<unsigned int>(data.size()));
     TagLib::ByteVectorStream stream(bv);
     TagLib::MPEG::File f(&stream, TagLib::ID3v2::FrameFactory::instance());
-    if (!f.isNull() && f.tag())
+    if (f.isValid() && f.tag())
     {
         m_artist = f.tag()->artist().toCString(true);
         m_title  = f.tag()->title().toCString(true);
