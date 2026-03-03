@@ -61,9 +61,9 @@ QVariant TableModelKaraokeSongs::data(const QModelIndex &index, int role) const 
             case COL_DURATION:
             case COL_PLAYS:
             case COL_LASTPLAY:
-                return Qt::AlignRight | Qt::AlignVCenter;
+                return int(Qt::AlignRight | Qt::AlignVCenter);
             default:
-                return Qt::AlignLeft | Qt::AlignVCenter;
+                return int(Qt::AlignLeft | Qt::AlignVCenter);
         }
     } else if (role == Qt::DecorationRole) {
         if (index.column() == COL_SONGID) {

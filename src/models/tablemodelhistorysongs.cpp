@@ -37,13 +37,13 @@ QVariant TableModelHistorySongs::data(const QModelIndex &index, int role) const
     {
         switch (index.column()) {
         case 6:
-            return Qt::AlignHCenter;
+            return int(Qt::AlignHCenter);
         case 7:
-            return Qt::AlignRight;
+            return int(Qt::AlignRight);
         case 8:
-            return Qt::AlignHCenter;
+            return int(Qt::AlignHCenter);
         default:
-            return Qt::AlignLeft;
+            return int(Qt::AlignLeft);
         }
     }
     if (role == Qt::DisplayRole)

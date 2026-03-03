@@ -2311,7 +2311,7 @@ void MainWindow::on_actionPlaylistImport_triggered() {
         QStringList files;
         QFile textFile;
         textFile.setFileName(importFile);
-        textFile.open(QFile::ReadOnly);
+        (void)textFile.open(QFile::ReadOnly);
         QTextStream textStream(&textFile);
         while (true) {
             QString line = textStream.readLine();

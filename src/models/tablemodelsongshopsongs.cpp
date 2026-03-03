@@ -51,9 +51,9 @@ QVariant TableModelSongShopSongs::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
     if (index.column() == 5 && role == Qt::TextAlignmentRole)
-        return Qt::AlignRight;
+        return int(Qt::AlignRight);
     if (index.column() == 4 && role == Qt::TextAlignmentRole)
-        return Qt::AlignHCenter;
+        return int(Qt::AlignHCenter);
     if (role == Qt::DisplayRole)
     {
         if (index.column() == 0)
