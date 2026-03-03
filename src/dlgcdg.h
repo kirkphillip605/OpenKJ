@@ -73,7 +73,7 @@ public:
   void mousePressEvent(QMouseEvent *event) override
   {
     if (event->button() == Qt::LeftButton) {
-      m_startPoint = frameGeometry().topLeft() - event->globalPos();
+      m_startPoint = frameGeometry().topLeft() - event->globalPosition().toPoint();
     }
   }
 
