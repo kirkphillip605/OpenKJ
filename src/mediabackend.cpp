@@ -582,28 +582,6 @@ void MediaBackend::gstBusFunc(GstMessage *message)
                 emit audioError("Unable to play " + player + " file, missing gstreamer plugin");
                 stop(true);
             }
-            else if (err->domain == GST_RESOURCE_ERROR &&
-                     (err->code == GST_RESOURCE_ERROR_OPEN_WRITE ||
-                      err->code == GST_RESOURCE_ERROR_WRITE      ||
-                      err->code == GST_RESOURCE_ERROR_NOT_FOUND))
-            {
-                // Audio device lost or unavailable — attempt graceful fallback.
-                qCritical() << m_objName << " - Audio device error, attempting fallback to system default";
-                if (m_outputDevice.index != 0)
-                {
-                    // Schedule the device switch on the next event loop iteration to
-                    // avoid re-entering GStreamer state-change machinery mid-callback.
-                    QMetaObject::invokeMethod(this, [this]() {
-                        setAudioOutputDevice(AudioOutputDevice{"0 - Default", nullptr, 0});
-                    }, Qt::QueuedConnection);
-                }
-                else
-                {
-                    // Already on default device; stop cleanly rather than hang.
-                    QMetaObject::invokeMethod(this, [this]() { stop(true); },
-                                             Qt::QueuedConnection);
-                }
-            }
             g_error_free(err);
             g_free(debug);
             break;
@@ -1056,7 +1034,7 @@ void MediaBackend::setUseSilenceDetection(const bool &enabled) {
 
 bool MediaBackend::isSilent()
 {
-    if ((m_currentRmsLevel <= 0.01) && (m_volume > 0) && (!m_fader->isFading()))
+    if ((m_currentRmsLevel <= 0.001) && (m_volume > 0) && (!m_fader->isFading()))
         return true;
     return false;
 }

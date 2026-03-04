@@ -75,7 +75,7 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QS
         dir.mkpath(logDir);
         logFilePath = logDir + QDir::separator() + filename;
         logFile.setFileName(logFilePath);
-    (void)logFile.open(QFile::WriteOnly);
+        (void)logFile.open(QFile::WriteOnly);
         logStream.setDevice(&logFile);
     }
 

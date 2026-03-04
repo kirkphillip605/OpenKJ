@@ -24,6 +24,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QDebug>
+#include <QSet>
 #include <QStandardPaths>
 #include "src/models/tablemodelkaraokesourcedirs.h"
 #include <QtConcurrent>
@@ -38,34 +39,19 @@ QStringList errors;
 
 bool DbUpdateThread::dbEntryExists(QString filepath)
 {
-//    qInfo() << "DbUpdateThread::dbEntryExists(" << filepath << ") called";
-//    qInfo() << "Creating thread db connection";
-//    QSqlDatabase database = genUniqueDbConn();
-//    database.setDatabaseName(QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QDir::separator() + "openkj.sqlite");
-//    database.open();
-//    qInfo() << "Created";
-    QSqlQuery query;
+    QSqlQuery query(database);
     query.prepare("select exists(select 1 from dbsongs where path = :filepath)");
     query.bindValue(":filepath", filepath);
     query.exec();
     if (query.first())
     {
-//        qInfo() << "Removing thread db connection";
-//        QSqlDatabase::removeDatabase(database.connectionName());
-//        qInfo() << "Removed";
         bool result = query.value(0).toBool();
         query.clear();
-        //qInfo() << "dbentryexists returning" << result << " for " << filepath;
-//        qInfo() << "DbUpdateThread::dbEntryExists(" << filepath << ") ended";
         return result;
     }
     else
     {
         query.clear();
-//        qInfo() << "Removing thread db connection";
-//        QSqlDatabase::removeDatabase(database.connectionName());
-//        qInfo() << "Removed";
-//        qInfo() << "DbUpdateThread::dbEntryExists(" << filepath << ") ended";
         return false;
     }
 }
@@ -131,68 +117,82 @@ QString DbUpdateThread::getPath() const
 QStringList DbUpdateThread::findKaraokeFiles(QString directory)
 {
     qInfo() << "DbUpdateThread::findKaraokeFiles(" << directory << ") called";
-    QStringList files;
-    emit progressMessage("Finding karaoke files in " + directory);
-    files.clear();
-    files.reserve(200000);
     QDir dir(directory);
-    QDirIterator iterator(dir.absolutePath(), QDirIterator::Subdirectories);
+    emit progressMessage("Finding karaoke files in " + directory);
 
-    int existing = 0;
-    int notInDb = 0;
-    int total = 0;
-    qInfo() << "Creating query";
-    QSqlQuery query;
-    qInfo() << "Created";
-    bool alreadyInDb = false;
-    query.prepare("SELECT songid FROM dbsongs WHERE path = :filepath AND discid != '!!DROPPED!!' LIMIT 1");
-    int loops = 0;
-    while (iterator.hasNext()) {
-        iterator.next();
-        if (!iterator.fileInfo().isDir()) {
-            total++;
-            query.bindValue(":filepath", iterator.filePath());
-            query.exec();
-            //qInfo() << query.lastError();
-            if (query.first())
-            {
-                alreadyInDb = true;
-            }
-            else
-            {
-                alreadyInDb = false;
-            }
-            if (alreadyInDb)
-            {
-                existing++;
-                if (loops >= 5)
-                {
-                    emit stateChanged("Finding potential karaoke files... " + QString::number(total) + " found. " + QString::number(notInDb) + " new/" + QString::number(existing) + " existing");
-                    loops = 0;
-                }
-                continue;
-            }
-            QString fn = iterator.filePath();
-            if (fn.endsWith(".zip",Qt::CaseInsensitive))
-                files.append(fn);
-            else if (fn.endsWith(".cdg", Qt::CaseInsensitive))
-            {
-                if (findMatchingAudioFile(fn) != "")
-                    files.append(fn);
-            }
-            else if (fn.endsWith(".mkv", Qt::CaseInsensitive) || fn.endsWith(".avi", Qt::CaseInsensitive) || fn.endsWith(".wmv", Qt::CaseInsensitive) || fn.endsWith(".mp4", Qt::CaseInsensitive) || fn.endsWith(".m4v", Qt::CaseInsensitive) || fn.endsWith(".mpg", Qt::CaseInsensitive) || fn.endsWith(".mpeg", Qt::CaseInsensitive))
-                files.append(fn);
-            notInDb++;
-        }
-        if (loops >= 5)
-        {
-            emit stateChanged("Finding potential karaoke files... " + QString::number(total) + " found. " + QString::number(notInDb) + " new/" + QString::number(existing) + " existing");
-            loops = 0;
-        }
-        loops++;
+    // Load all existing, non-dropped paths into a set in ONE query for O(1) lookups.
+    QSet<QString> existingPaths;
+    {
+        QSqlQuery dbQuery(database);
+        dbQuery.exec("SELECT path FROM dbsongs WHERE discid != '!!DROPPED!!'");
+        while (dbQuery.next())
+            existingPaths.insert(dbQuery.value(0).toString());
     }
-    emit stateChanged("Finding potential karaoke files... " + QString::number(total) + " found. " + QString::number(notInDb) + " new/" + QString::number(existing) + " existing");
-    qInfo() << "File search results - Potential files: " << files.size() << " - Already in DB: " << existing << " - New: " << notInDb;
+
+    // Case-insensitive string comparator for binary_search on sorted QStringLists.
+    static const auto caseInsensitiveLess = [](const QString &a, const QString &b) {
+        return a.compare(b, Qt::CaseInsensitive) < 0;
+    };
+
+    // Single pass: collect karaoke candidates and audio file basenames simultaneously.
+    static const QStringList audioExts = {"mp3", "wav", "ogg", "mov", "flac"};
+    QStringList candidateKaraoke;
+    QStringList audioBasePaths;  // path without extension, for CDG matching
+
+    int total = 0;
+    {
+        QDirIterator it(dir.absolutePath(), QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            it.next();
+            if (it.fileInfo().isDir())
+                continue;
+            total++;
+            const QString fp  = it.filePath();
+            const QString ext = it.fileInfo().suffix().toLower();
+            if (ext == "zip" || ext == "cdg" || ext == "mkv" || ext == "avi" ||
+                ext == "wmv" || ext == "mp4" || ext == "m4v" || ext == "mpg" ||
+                ext == "mpeg")
+            {
+                candidateKaraoke.append(fp);
+            }
+            else if (audioExts.contains(ext))
+            {
+                audioBasePaths.append(it.fileInfo().absolutePath() + "/" +
+                                      it.fileInfo().completeBaseName());
+            }
+            if (total % 500 == 0)
+                emit stateChanged(QString("Scanning for karaoke files... %1 found").arg(total));
+        }
+    }
+    audioBasePaths.sort();
+
+    // Filter candidates: skip existing DB entries, and for CDG verify audio match.
+    QStringList files;
+    int existing = 0;
+    int notInDb  = 0;
+
+    for (const QString &fn : std::as_const(candidateKaraoke)) {
+        if (existingPaths.contains(fn)) {
+            existing++;
+            continue;
+        }
+        if (fn.endsWith(".cdg", Qt::CaseInsensitive)) {
+            // Only add CDG if a matching audio file was found.
+            const QFileInfo fi(fn);
+            const QString basePath = fi.absolutePath() + "/" + fi.completeBaseName();
+            if (!std::binary_search(audioBasePaths.constBegin(), audioBasePaths.constEnd(),
+                                    basePath, caseInsensitiveLess))
+                continue;
+        }
+        files.append(fn);
+        notInDb++;
+    }
+
+    emit stateChanged("Finding potential karaoke files... " + QString::number(total) +
+                      " found. " + QString::number(notInDb) + " new/" +
+                      QString::number(existing) + " existing");
+    qInfo() << "File search results - Potential files: " << files.size()
+            << " - Already in DB: " << existing << " - New: " << notInDb;
     emit progressMessage("Done searching for files.");
     qInfo() << "DbUpdateThread::findKaraokeFiles(" << directory << ") ended";
     return files;
@@ -201,13 +201,8 @@ QStringList DbUpdateThread::findKaraokeFiles(QString directory)
 QStringList DbUpdateThread::getMissingDbFiles()
 {
     qInfo() << "DbUpdateThread::getMissingDbFiles() called";
-//    qInfo() << "Creating thread db connection";
-//    QSqlDatabase database = genUniqueDbConn();
-////    database.setDatabaseName(QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QDir::separator() + "openkj.sqlite");
-//    database.open();
-//    qInfo() << "Created";
     QStringList files;
-    QSqlQuery query;
+    QSqlQuery query(database);
     query.exec("SELECT path from dbsongs");
     while (query.next())
     {
@@ -218,33 +213,20 @@ QStringList DbUpdateThread::getMissingDbFiles()
         }
     }
     query.clear();
-//    database.close();
-//    qInfo() << "Removing thread db connection";
-//    QSqlDatabase::removeDatabase(database.connectionName());
-//    qInfo() << "Removed";
-//    qInfo() << "DbUpdateThread::getMissingDbFiles() ended";
     return files;
 }
 
 QStringList DbUpdateThread::getDragDropFiles()
 {
     qInfo() << "DbUpdateThread::getDragDropFiles() called";
-//    qInfo() << "Creating thread db connection";
-//    QSqlDatabase database = genUniqueDbConn();
-////    database.setDatabaseName(QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QDir::separator() + "openkj.sqlite");
-//    database.open();
-//    qInfo() << "Created";
     QStringList files;
-    QSqlQuery query;
+    QSqlQuery query(database);
     query.exec("SELECT path from dbsongs WHERE discid = '!!DROPPED!!'");
     while (query.next())
     {
         files.append(query.value("path").toString());
     }
     query.clear();
-//    qInfo() << "Removing thread db connection";
-//    QSqlDatabase::removeDatabase(database.connectionName());
-//    qInfo() << "Removed";
     qInfo() << "DbUpdateThread::getDragDropFiles() ended";
     return files;
 }
@@ -262,7 +244,7 @@ QStringList DbUpdateThread::getErrors()
 void DbUpdateThread::addSingleTrack(QString path)
 {
     MzArchive archive;
-    QSqlQuery query;
+    QSqlQuery query(database);
     query.prepare("INSERT OR IGNORE INTO dbSongs (discid,artist,title,path,filename,duration,searchstring) VALUES(:discid, :artist, :title, :path, :filename, :duration, :searchstring)");
     int duration = 0;
     QFileInfo file(path);
@@ -311,7 +293,7 @@ void DbUpdateThread::addSingleTrack(QString path)
 
 int DbUpdateThread::addDroppedFile(QString path)
 {
-    QSqlQuery query;
+    QSqlQuery query(database);
     query.prepare("SELECT songid FROM dbsongs WHERE path = :path LIMIT 1");
     query.bindValue(":path", path);
     query.exec();
@@ -361,7 +343,7 @@ void DbUpdateThread::startUnthreaded()
     QStringList newSongs = findKaraokeFiles(path);
     QStringList dragDropFiles = getDragDropFiles();
     qInfo() << "Creating QSqlQuery";
-    QSqlQuery query;
+    QSqlQuery query(database);
     qInfo() << "Created";
 
     // Try to find out if any of the new files found have been moved and fix the db entry
