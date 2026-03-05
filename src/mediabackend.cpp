@@ -300,8 +300,12 @@ void MediaBackend::play()
 
 void MediaBackend::resetPipeline()
 {
-    // Stop pipeline
+    // Stop pipeline and wait for all streaming threads to finish.
+    // Without waiting, GStreamer queue threads (e.g. videoqueue2:src)
+    // may still be pushing events to downstream elements like appsink,
+    // causing use-after-free / EXC_BAD_ACCESS crashes.
     gst_element_set_state(m_pipeline, GST_STATE_NULL);
+    gst_element_get_state(m_pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
 
     m_hasVideo = false;
     gst_element_unlink(m_decoder, m_audioBin);
@@ -334,9 +338,10 @@ void MediaBackend::patchPipelineSinks()
             auto currentSrc = gsthlp_get_peer_element(m_audioBin, "sink");
             if (currentSrc)
             {
+                gst_element_set_state(m_audioBin, GST_STATE_NULL);
+                gst_element_get_state(m_audioBin, nullptr, nullptr, GST_CLOCK_TIME_NONE);
                 gst_element_unlink(currentSrc, m_audioBin);
                 gst_bin_remove(m_pipelineAsBin, m_audioBin);
-                gst_element_set_state(m_audioBin, GST_STATE_NULL);
             }
         }
     }
@@ -360,9 +365,14 @@ void MediaBackend::patchPipelineSinks()
             if (currentSrc)
             {
                 m_hasVideo = false;
+                // Stop the bin and wait for all streaming threads to drain
+                // before removing it from the pipeline. This prevents
+                // videoqueue threads from pushing events to a disconnected
+                // appsink.
+                gst_element_set_state(m_videoBin, GST_STATE_NULL);
+                gst_element_get_state(m_videoBin, nullptr, nullptr, GST_CLOCK_TIME_NONE);
                 gst_element_unlink(currentSrc, m_videoBin);
                 gst_bin_remove(m_pipelineAsBin, m_videoBin);
-                gst_element_set_state(m_videoBin, GST_STATE_NULL);
                 emit hasActiveVideoChanged(false);
             }
         }
@@ -953,6 +963,7 @@ void MediaBackend::padAddedToDecoder_cb(GstElement *element,  GstPad *pad, gpoin
 void MediaBackend::stopPipeline()
 {
     gst_element_set_state(m_pipeline, GST_STATE_NULL);
+    gst_element_get_state(m_pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
     m_currentState = GST_STATE_NULL;
     m_hasVideo = false;
     emit stateChanged(MediaBackend::StoppedState);
