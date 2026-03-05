@@ -46,6 +46,10 @@ private:
     int selectedRow;
     QSqlDatabase db;
     DirectoryMonitor *m_dirMonitor{nullptr};
+    bool m_scanRunning{false};
+
+    void setUpdateButtonsEnabled(bool enabled);
+    void scan(bool allDirs);
 
 public:
     explicit DlgDatabase(QSqlDatabase db, QWidget *parent = 0);

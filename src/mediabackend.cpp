@@ -263,6 +263,7 @@ void MediaBackend::play()
 
         allowMissingAudio = m_type == VideoPreview;
 
+        m_cdgSrc->setUpscalingEnabled(settings.cdgUpscalingEnabled());
         m_cdgSrc->load(m_cdgFilename);
 
         qInfo() << m_objName << " - play - playing cdg:   " << m_cdgFilename;

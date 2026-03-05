@@ -29,6 +29,8 @@
 #include "settings.h"
 #include <QStandardPaths>
 #include <QFileSystemWatcher>
+#include <functional>
+#include <memory>
 
 extern Settings settings;
 
@@ -165,79 +167,100 @@ void DlgDatabase::on_tableViewFolders_clicked(const QModelIndex &index)
     selectedRow = index.row();
 }
 
-void DlgDatabase::on_buttonUpdate_clicked()
+void DlgDatabase::setUpdateButtonsEnabled(bool enabled)
 {
-    if (selectedRow >= 0)
-    {
-        DbUpdateThread *updateThread = new DbUpdateThread(QSqlDatabase::cloneDatabase(QSqlDatabase::database(), "threaddb"),this);
-        //emit databaseAboutToUpdate();
-        dbUpdateDlg->reset();
+    ui->buttonUpdate->setEnabled(enabled);
+    ui->buttonUpdateAll->setEnabled(enabled);
+    ui->buttonNew->setEnabled(enabled);
+    ui->buttonDelete->setEnabled(enabled);
+}
+
+void DlgDatabase::scan(bool allDirs)
+{
+    if (m_scanRunning)
+        return;
+
+    QStringList paths;
+    QList<SourceDir::NamingPattern> patterns;
+
+    if (allDirs) {
+        for (int i = 0; i < sourcedirmodel->size(); i++) {
+            paths.append(sourcedirmodel->getDirByIndex(i).getPath());
+            patterns.append(sourcedirmodel->getDirByIndex(i).getPattern());
+        }
+    } else {
+        if (selectedRow < 0)
+            return;
+        paths.append(sourcedirmodel->getDirByIndex(selectedRow).getPath());
+        patterns.append(sourcedirmodel->getDirByIndex(selectedRow).getPattern());
+    }
+
+    if (paths.isEmpty())
+        return;
+
+    m_scanRunning = true;
+    setUpdateButtonsEnabled(false);
+
+    dbUpdateDlg->reset();
+    dbUpdateDlg->changeDirectory(paths.first());
+    dbUpdateDlg->show();
+
+    // We process each path sequentially using a queue.
+    // Create a shared context for the sequential scan.
+    auto *remainingPaths = new QStringList(paths);
+    auto *remainingPatterns = new QList<SourceDir::NamingPattern>(patterns);
+
+    // Use a shared_ptr to safely allow the lambda to reference itself
+    auto scanNext = std::make_shared<std::function<void()>>();
+    *scanNext = [this, remainingPaths, remainingPatterns, scanNext]() {
+        if (remainingPaths->isEmpty()) {
+            // All done
+            delete remainingPaths;
+            delete remainingPatterns;
+            m_scanRunning = false;
+            setUpdateButtonsEnabled(true);
+            emit databaseUpdateComplete();
+            dbUpdateDlg->hide();
+            QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
+            return;
+        }
+
+        QString path = remainingPaths->takeFirst();
+        SourceDir::NamingPattern pattern = remainingPatterns->takeFirst();
+
+        dbUpdateDlg->changeDirectory(path);
+
+        auto *updateThread = new DbUpdateThread(
+            QSqlDatabase::cloneDatabase(QSqlDatabase::database(), "threaddb"), this);
+        updateThread->setPath(path);
+        updateThread->setPattern(pattern);
+
         connect(updateThread, SIGNAL(progressMessage(QString)), dbUpdateDlg, SLOT(addProgressMsg(QString)));
         connect(updateThread, SIGNAL(stateChanged(QString)), dbUpdateDlg, SLOT(changeStatusTxt(QString)));
         connect(updateThread, SIGNAL(progressMaxChanged(int)), dbUpdateDlg, SLOT(setProgressMax(int)));
         connect(updateThread, SIGNAL(progressChanged(int)), dbUpdateDlg, SLOT(changeProgress(int)));
-        dbUpdateDlg->changeDirectory(sourcedirmodel->getDirByIndex(selectedRow).getPath());
-        dbUpdateDlg->show();
-//        QMessageBox msgBox;
-//        msgBox.setStandardButtons(0);
-//        msgBox.setText("Updating Database, please wait...");
-//        msgBox.show();
-        QApplication::processEvents();
-        updateThread->setPath(sourcedirmodel->getDirByIndex(selectedRow).getPath());
-        updateThread->setPattern(sourcedirmodel->getDirByIndex(selectedRow).getPattern());
-        QApplication::processEvents();
-        updateThread->startUnthreaded();
-//        while (updateThread->isRunning())
-//        {
-//            QApplication::processEvents();
-//        }
-        emit databaseUpdateComplete();
-        QApplication::processEvents();
-        dbUpdateDlg->changeStatusTxt(tr("Database update complete!"));
-        dbUpdateDlg->setProgressMax(100);
-        dbUpdateDlg->changeProgress(100);
-        QApplication::processEvents();
-        showDbUpdateErrors(updateThread->getErrors());
-        QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
-        dbUpdateDlg->hide();
-    }
+
+        connect(updateThread, &DbUpdateThread::databaseUpdateComplete, this, [this, updateThread, scanNext]() {
+            showDbUpdateErrors(updateThread->getErrors());
+            updateThread->deleteLater();
+            // Continue with next path
+            (*scanNext)();
+        });
+
+        updateThread->start();
+    };
+
+    (*scanNext)();
+}
+
+void DlgDatabase::on_buttonUpdate_clicked()
+{
+    scan(false);
 }
 
 void DlgDatabase::on_buttonUpdateAll_clicked()
 {
-    //emit databaseAboutToUpdate();
-    DbUpdateThread *updateThread = new DbUpdateThread(QSqlDatabase::cloneDatabase(QSqlDatabase::database(), "threaddb"),this);
-    dbUpdateDlg->reset();
-    connect(updateThread, SIGNAL(progressMessage(QString)), dbUpdateDlg, SLOT(addProgressMsg(QString)));
-    connect(updateThread, SIGNAL(stateChanged(QString)), dbUpdateDlg, SLOT(changeStatusTxt(QString)));
-    connect(updateThread, SIGNAL(progressMaxChanged(int)), dbUpdateDlg, SLOT(setProgressMax(int)));
-    connect(updateThread, SIGNAL(progressChanged(int)), dbUpdateDlg, SLOT(changeProgress(int)));
-    dbUpdateDlg->show();
-
-    //QMessageBox msgBox;
-    //msgBox.setStandardButtons(0);
-    //msgBox.setText("Updating Database, please wait...");
-    //msgBox.show();
-    for (int i=0; i < sourcedirmodel->size(); i++)
-    {
-        //msgBox.setInformativeText("Processing path: " + sourcedirmodel->getDirByIndex(i)->getPath());
-        dbUpdateDlg->changeDirectory(sourcedirmodel->getDirByIndex(i).getPath());
-        updateThread->setPath(sourcedirmodel->getDirByIndex(i).getPath());
-        updateThread->setPattern(sourcedirmodel->getDirByIndex(i).getPattern());
-        updateThread->startUnthreaded();
-//        while (updateThread->isRunning())
-//        {
-//            QApplication::processEvents();
-//        }
-    }
-//    msgBox.setInformativeText("Reloading song database into cache");
-    emit databaseUpdateComplete();
-//    msgBox.hide();
-    showDbUpdateErrors(updateThread->getErrors());
-    dbUpdateDlg->hide();
-    QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
-    delete(updateThread);
-    emit databaseUpdateComplete();
+    scan(true);
 }
 
 void DlgDatabase::on_btnClearDatabase_clicked()
