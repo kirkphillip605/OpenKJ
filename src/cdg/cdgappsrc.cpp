@@ -52,6 +52,7 @@ void CdgAppSrc::load(const QString filename)
 {
     QMutexLocker locker(&m_cdgFileReaderLock);
     reset();
+    // Refresh caps to match the current upscaling mode before starting playback
     updateCaps();
     m_cdgFileReader = new CdgFileReader(filename);
     gst_app_src_set_duration(m_cdgAppSrc, m_cdgFileReader->getTotalDurationMS() * GST_MSECOND);

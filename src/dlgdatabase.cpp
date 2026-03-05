@@ -30,6 +30,7 @@
 #include <QStandardPaths>
 #include <QFileSystemWatcher>
 #include <functional>
+#include <memory>
 
 extern Settings settings;
 
@@ -209,19 +210,18 @@ void DlgDatabase::scan(bool allDirs)
     auto *remainingPaths = new QStringList(paths);
     auto *remainingPatterns = new QList<SourceDir::NamingPattern>(patterns);
 
-    // Lambda to kick off the next scan (or finish)
-    std::function<void()> scanNext;
-    scanNext = [this, remainingPaths, remainingPatterns, scanNext]() {
+    // Use a shared_ptr to safely allow the lambda to reference itself
+    auto scanNext = std::make_shared<std::function<void()>>();
+    *scanNext = [this, remainingPaths, remainingPatterns, scanNext]() {
         if (remainingPaths->isEmpty()) {
             // All done
-            emit databaseUpdateComplete();
-            dbUpdateDlg->hide();
-            QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
-            emit databaseUpdateComplete();
             delete remainingPaths;
             delete remainingPatterns;
             m_scanRunning = false;
             setUpdateButtonsEnabled(true);
+            emit databaseUpdateComplete();
+            dbUpdateDlg->hide();
+            QMessageBox::information(this, tr("Update Complete"), tr("Database update complete."));
             return;
         }
 
@@ -244,13 +244,13 @@ void DlgDatabase::scan(bool allDirs)
             showDbUpdateErrors(updateThread->getErrors());
             updateThread->deleteLater();
             // Continue with next path
-            scanNext();
+            (*scanNext)();
         });
 
         updateThread->start();
     };
 
-    scanNext();
+    (*scanNext)();
 }
 
 void DlgDatabase::on_buttonUpdate_clicked()
