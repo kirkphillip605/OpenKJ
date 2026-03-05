@@ -1,0 +1,6 @@
+[submodule "src/qlementine"]
+	path = src/qlementine
+	url = https://github.com/oclero/qlementine.git
+[submodule "src/qlementine-icons"]
+	path = src/qlementine-icons
+	url = https://github.com/oclero/qlementine-icons.git
