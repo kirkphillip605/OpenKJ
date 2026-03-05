@@ -116,6 +116,13 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     )
 endif ()
 
+# --- Qlementine Style Engine & Icons (Qt 6 only) ---
+if(QT_VERSION_MAJOR EQUAL 6)
+    add_subdirectory(src/qlementine)
+    add_subdirectory(src/qlementine-icons)
+    add_definitions(-DUSE_QLEMENTINE)
+endif()
+
 # --- Project Source Files (Internal TagLib directory entirely purged) ---
 set(SOURCE_FILES
         src/miniz/miniz.h
@@ -302,6 +309,10 @@ set(LIBRARIES
         Qt${QT_VERSION_MAJOR}::PrintSupport
         Qt${QT_VERSION_MAJOR}::Concurrent
         )
+
+if(QT_VERSION_MAJOR EQUAL 6)
+    list(APPEND LIBRARIES qlementine qlementine-icons)
+endif()
 
 # --- Target Execution & Deployment ---
 

@@ -20,6 +20,7 @@
 
 #include "dlgsettings.h"
 #include "ui_dlgsettings.h"
+#include "theme.h"
 #include <QDebug>
 #include <QGuiApplication>
 // (QDesktopWidget removed — no longer used; use QGuiApplication::screens() instead)
@@ -166,12 +167,10 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
         ui->comboBoxCodec->setCurrentIndex(ui->comboBoxCodec->findText(settings.recordingCodec()));
     ui->comboBoxUpdateBranch->addItem("Stable");
     ui->comboBoxUpdateBranch->addItem("Development");
-    ui->cbxTheme->addItem("OS Native");
-    ui->cbxTheme->addItem("Fusion Dark");
-    ui->cbxTheme->addItem("Fusion Light");
-    ui->cbxTheme->setCurrentIndex(settings.theme());
-    ui->comboBoxAppTheme->addItem("Default");
-    ui->comboBoxAppTheme->addItem("Modern");
+    // Populate the unified Qlementine theme selector
+    const QStringList themeNames = AppTheme::availableThemeNames();
+    for (const QString &name : themeNames)
+        ui->comboBoxAppTheme->addItem(name);
     ui->comboBoxAppTheme->setCurrentIndex(settings.appTheme());
     ui->checkBoxTouchFriendly->setChecked(settings.touchFriendlyEnabled());
     ui->lineEditOutputDir->setText(settings.recordingOutputDir());

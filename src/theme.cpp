@@ -20,275 +20,109 @@
 #include "theme.h"
 #include <QApplication>
 
+#ifdef USE_QLEMENTINE
+#include <oclero/qlementine/style/QlementineStyle.hpp>
+#include <oclero/qlementine/style/ThemeManager.hpp>
+#include <oclero/qlementine/icons/QlementineIcons.hpp>
+#endif
+
+#include <QStyleFactory>
+
 namespace AppTheme {
 
-// Modern "Glass" QSS — deep slate/dark-blue background with vibrant green accents
-// and subtly rounded, semi-transparent "glass" buttons.
-static const QString kModernQss = QStringLiteral(
-    /* ── Base window / widget ─────────────────────────────────────────── */
-    "QWidget {"
-    "  background-color: #1a1f2e;"
-    "  color: #e8eaf0;"
-    "  font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;"
-    "}"
+struct ThemeEntry {
+    QString displayName;
+    QString resourcePath;
+    bool    dark;
+};
 
-    /* ── Main window ───────────────────────────────────────────────────── */
-    "QMainWindow {"
-    "  background-color: #141824;"
-    "}"
+static const ThemeEntry kThemeTable[] = {
+    { QStringLiteral("Light"),         QStringLiteral(":/themes/themes/light.json"),         false },
+    { QStringLiteral("Dark"),          QStringLiteral(":/themes/themes/dark.json"),          true  },
+    { QStringLiteral("Midnight Blue"), QStringLiteral(":/themes/themes/midnight-blue.json"), true  },
+    { QStringLiteral("Charcoal"),      QStringLiteral(":/themes/themes/charcoal.json"),      true  },
+    { QStringLiteral("Forest"),        QStringLiteral(":/themes/themes/forest.json"),        true  },
+    { QStringLiteral("Amber"),         QStringLiteral(":/themes/themes/amber.json"),         true  },
+};
 
-    /* ── Dialogs ───────────────────────────────────────────────────────── */
-    "QDialog {"
-    "  background-color: #1a1f2e;"
-    "}"
+static constexpr int kThemeCount = static_cast<int>(sizeof(kThemeTable) / sizeof(kThemeTable[0]));
 
-    /* ── Menu bar / menus ─────────────────────────────────────────────── */
-    "QMenuBar {"
-    "  background-color: #141824;"
-    "  color: #c8cad4;"
-    "  border-bottom: 1px solid #2a3050;"
-    "}"
-    "QMenuBar::item:selected {"
-    "  background-color: #252d45;"
-    "}"
-    "QMenu {"
-    "  background-color: #1e2538;"
-    "  color: #e8eaf0;"
-    "  border: 1px solid #2a3050;"
-    "}"
-    "QMenu::item:selected {"
-    "  background-color: #26a65b;"
-    "  color: #ffffff;"
-    "}"
+#ifdef USE_QLEMENTINE
+static oclero::qlementine::QlementineStyle *sStyle = nullptr;
+#endif
 
-    /* ── Push buttons — glass effect ──────────────────────────────────── */
-    "QPushButton {"
-    "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-    "              stop:0 rgba(60,75,110,200), stop:1 rgba(35,45,75,200));"
-    "  color: #e8eaf0;"
-    "  border: 1px solid rgba(100,120,180,120);"
-    "  border-radius: 5px;"
-    "  padding: 4px 12px;"
-    "  min-height: 24px;"
-    "}"
-    "QPushButton:hover {"
-    "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-    "              stop:0 rgba(80,100,150,220), stop:1 rgba(50,65,105,220));"
-    "  border-color: rgba(130,160,220,160);"
-    "}"
-    "QPushButton:pressed {"
-    "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-    "              stop:0 rgba(30,38,65,230), stop:1 rgba(50,65,105,230));"
-    "}"
-    "QPushButton:disabled {"
-    "  color: #555a6e;"
-    "  border-color: rgba(80,90,120,80);"
-    "}"
-
-    /* ── Tab widgets ──────────────────────────────────────────────────── */
-    "QTabWidget::pane {"
-    "  border: 1px solid #2a3050;"
-    "  background-color: #1a1f2e;"
-    "}"
-    "QTabBar::tab {"
-    "  background-color: #1e2538;"
-    "  color: #9098b0;"
-    "  padding: 6px 14px;"
-    "  border: 1px solid #2a3050;"
-    "  border-bottom: none;"
-    "  border-top-left-radius: 4px;"
-    "  border-top-right-radius: 4px;"
-    "  margin-right: 2px;"
-    "}"
-    "QTabBar::tab:selected {"
-    "  background-color: #252d45;"
-    "  color: #e8eaf0;"
-    "  border-bottom: 2px solid #26a65b;"
-    "}"
-    "QTabBar::tab:hover:!selected {"
-    "  background-color: #202840;"
-    "}"
-
-    /* ── Table views ──────────────────────────────────────────────────── */
-    "QTableView {"
-    "  background-color: #1a1f2e;"
-    "  alternate-background-color: #1f2540;"
-    "  color: #e8eaf0;"
-    "  gridline-color: #252d45;"
-    "  selection-background-color: #26a65b;"
-    "  selection-color: #ffffff;"
-    "  border: 1px solid #2a3050;"
-    "}"
-    "QTableView::item:hover {"
-    "  background-color: rgba(38,166,91,40);"
-    "}"
-    "QHeaderView::section {"
-    "  background-color: #1e2538;"
-    "  color: #9098b0;"
-    "  padding: 4px 6px;"
-    "  border: none;"
-    "  border-bottom: 1px solid #2a3050;"
-    "  border-right: 1px solid #2a3050;"
-    "}"
-    "QHeaderView::section:first {"
-    "  border-left: none;"
-    "}"
-
-    /* ── List views ───────────────────────────────────────────────────── */
-    "QListView {"
-    "  background-color: #1a1f2e;"
-    "  alternate-background-color: #1f2540;"
-    "  color: #e8eaf0;"
-    "  selection-background-color: #26a65b;"
-    "  selection-color: #ffffff;"
-    "  border: 1px solid #2a3050;"
-    "}"
-
-    /* ── Combo boxes ──────────────────────────────────────────────────── */
-    "QComboBox {"
-    "  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,"
-    "              stop:0 rgba(55,70,105,200), stop:1 rgba(35,45,75,200));"
-    "  color: #e8eaf0;"
-    "  border: 1px solid rgba(100,120,180,120);"
-    "  border-radius: 4px;"
-    "  padding: 3px 8px;"
-    "  min-height: 22px;"
-    "}"
-    "QComboBox:hover {"
-    "  border-color: rgba(130,160,220,160);"
-    "}"
-    "QComboBox QAbstractItemView {"
-    "  background-color: #1e2538;"
-    "  color: #e8eaf0;"
-    "  selection-background-color: #26a65b;"
-    "  selection-color: #ffffff;"
-    "  border: 1px solid #2a3050;"
-    "}"
-
-    /* ── Line edits / spin boxes ─────────────────────────────────────── */
-    "QLineEdit, QSpinBox, QDoubleSpinBox, QFontComboBox {"
-    "  background-color: #252d45;"
-    "  color: #e8eaf0;"
-    "  border: 1px solid #2a3050;"
-    "  border-radius: 4px;"
-    "  padding: 3px 6px;"
-    "}"
-    "QLineEdit:focus, QSpinBox:focus {"
-    "  border-color: #26a65b;"
-    "}"
-
-    /* ── Check boxes / radio buttons ─────────────────────────────────── */
-    "QCheckBox, QRadioButton {"
-    "  color: #c8cad4;"
-    "  spacing: 6px;"
-    "}"
-    "QCheckBox::indicator, QRadioButton::indicator {"
-    "  width: 14px;"
-    "  height: 14px;"
-    "}"
-
-    /* ── Group boxes ──────────────────────────────────────────────────── */
-    "QGroupBox {"
-    "  border: 1px solid #2a3050;"
-    "  border-radius: 5px;"
-    "  margin-top: 8px;"
-    "  color: #9098b0;"
-    "}"
-    "QGroupBox::title {"
-    "  subcontrol-origin: margin;"
-    "  subcontrol-position: top left;"
-    "  padding: 0 4px;"
-    "  color: #9098b0;"
-    "}"
-
-    /* ── Scroll bars ──────────────────────────────────────────────────── */
-    "QScrollBar:vertical {"
-    "  background: #141824;"
-    "  width: 10px;"
-    "  margin: 0;"
-    "}"
-    "QScrollBar::handle:vertical {"
-    "  background: #2a3050;"
-    "  border-radius: 5px;"
-    "  min-height: 20px;"
-    "}"
-    "QScrollBar::handle:vertical:hover {"
-    "  background: #26a65b;"
-    "}"
-    "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {"
-    "  height: 0;"
-    "}"
-    "QScrollBar:horizontal {"
-    "  background: #141824;"
-    "  height: 10px;"
-    "  margin: 0;"
-    "}"
-    "QScrollBar::handle:horizontal {"
-    "  background: #2a3050;"
-    "  border-radius: 5px;"
-    "  min-width: 20px;"
-    "}"
-    "QScrollBar::handle:horizontal:hover {"
-    "  background: #26a65b;"
-    "}"
-    "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {"
-    "  width: 0;"
-    "}"
-
-    /* ── Sliders ──────────────────────────────────────────────────────── */
-    "QSlider::groove:horizontal {"
-    "  background: #252d45;"
-    "  height: 4px;"
-    "  border-radius: 2px;"
-    "}"
-    "QSlider::handle:horizontal {"
-    "  background: #26a65b;"
-    "  border: none;"
-    "  width: 14px;"
-    "  height: 14px;"
-    "  border-radius: 7px;"
-    "  margin: -5px 0;"
-    "}"
-    "QSlider::sub-page:horizontal {"
-    "  background: #26a65b;"
-    "  border-radius: 2px;"
-    "}"
-
-    /* ── Status bar ───────────────────────────────────────────────────── */
-    "QStatusBar {"
-    "  background-color: #141824;"
-    "  color: #9098b0;"
-    "  border-top: 1px solid #2a3050;"
-    "}"
-
-    /* ── Tool tip ─────────────────────────────────────────────────────── */
-    "QToolTip {"
-    "  background-color: #1e2538;"
-    "  color: #e8eaf0;"
-    "  border: 1px solid #2a3050;"
-    "  padding: 3px;"
-    "}"
-
-    /* ── Splitter ─────────────────────────────────────────────────────── */
-    "QSplitter::handle {"
-    "  background-color: #2a3050;"
-    "}"
-);
-
-QString stylesheetForTheme(ThemeId id)
+QStringList availableThemeNames()
 {
-    switch (id) {
-    case ThemeId::Modern:
-        return kModernQss;
-    default:
-        return {};
-    }
+    QStringList names;
+    names.reserve(kThemeCount);
+    for (int i = 0; i < kThemeCount; ++i)
+        names << kThemeTable[i].displayName;
+    return names;
 }
 
-void applyTheme(ThemeId id)
+QString themeJsonPath(int index)
 {
-    if (auto *app = qApp)
-        app->setStyleSheet(stylesheetForTheme(id));
+    if (index < 0 || index >= kThemeCount)
+        index = 0;
+    return kThemeTable[index].resourcePath;
+}
+
+bool isDarkTheme(int index)
+{
+    if (index < 0 || index >= kThemeCount)
+        return false;
+    return kThemeTable[index].dark;
+}
+
+void initializeStyle(int themeIndex)
+{
+    if (themeIndex < 0 || themeIndex >= kThemeCount)
+        themeIndex = Dark;
+
+#ifdef USE_QLEMENTINE
+    auto *style = new oclero::qlementine::QlementineStyle(qApp);
+    style->setAnimationsEnabled(true);
+    style->setAutoIconColor(oclero::qlementine::AutoIconColor::TextColor);
+    style->setThemeJsonPath(kThemeTable[themeIndex].resourcePath);
+    qApp->setStyle(style);
+    sStyle = style;
+
+    oclero::qlementine::icons::initializeIconTheme();
+#else
+    // Qt 5 fallback: use Fusion style with a dark palette when a dark theme is selected.
+    qApp->setStyle(QStyleFactory::create(QStringLiteral("Fusion")));
+    if (isDarkTheme(themeIndex)) {
+        QPalette pal;
+        pal.setColor(QPalette::Window,          QColor(53, 53, 53));
+        pal.setColor(QPalette::WindowText,      Qt::white);
+        pal.setColor(QPalette::Base,            QColor(42, 42, 42));
+        pal.setColor(QPalette::AlternateBase,   QColor(66, 66, 66));
+        pal.setColor(QPalette::ToolTipBase,     Qt::white);
+        pal.setColor(QPalette::ToolTipText,     QColor(53, 53, 53));
+        pal.setColor(QPalette::Text,            Qt::white);
+        pal.setColor(QPalette::Button,          QColor(53, 53, 53));
+        pal.setColor(QPalette::ButtonText,      Qt::white);
+        pal.setColor(QPalette::BrightText,      Qt::red);
+        pal.setColor(QPalette::Link,            QColor(42, 130, 218));
+        pal.setColor(QPalette::Highlight,       QColor(42, 130, 218));
+        pal.setColor(QPalette::HighlightedText, Qt::white);
+        qApp->setPalette(pal);
+    }
+#endif
+}
+
+void applyTheme(int themeIndex)
+{
+    if (themeIndex < 0 || themeIndex >= kThemeCount)
+        themeIndex = Dark;
+
+#ifdef USE_QLEMENTINE
+    if (sStyle) {
+        sStyle->setThemeJsonPath(kThemeTable[themeIndex].resourcePath);
+    }
+#else
+    Q_UNUSED(themeIndex);
+#endif
 }
 
 } // namespace AppTheme

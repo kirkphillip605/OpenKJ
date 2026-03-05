@@ -1179,7 +1179,8 @@ void Settings::setUpdatesBranch(int index) {
 }
 
 void Settings::setTheme(int theme) {
-    settings->setValue("theme", theme);
+    Q_UNUSED(theme);
+    // Legacy: icon theme is now derived from appTheme().
 }
 
 bool Settings::touchFriendlyEnabled() {
@@ -1192,7 +1193,7 @@ void Settings::setTouchFriendlyEnabled(bool enabled) {
 }
 
 int Settings::appTheme() {
-    return settings->value("appTheme", 0).toInt();
+    return settings->value("appTheme", 1).toInt();
 }
 
 void Settings::setAppTheme(int theme) {
@@ -1445,7 +1446,9 @@ int Settings::updatesBranch() {
 }
 
 int Settings::theme() {
-    return settings->value("theme", 1).toInt();
+    // Derive legacy theme value from the Qlementine appTheme selection.
+    // Returns 1 for dark icon sets, 0 for light.
+    return (appTheme() >= 1) ? 1 : 0;
 }
 
 const QPoint Settings::durationPosition() {
