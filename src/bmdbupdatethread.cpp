@@ -26,6 +26,7 @@
 #include <QApplication>
 #include "tagreader.h"
 #include <QtConcurrent>
+#include <atomic>
 
 BmDbUpdateThread::BmDbUpdateThread(QSqlDatabase db, QObject *parent) :
     QThread(parent)
@@ -77,7 +78,24 @@ QStringList BmDbUpdateThread::findMediaFiles(QString directory)
 
 void BmDbUpdateThread::run()
 {
-    database.open();
+    // Qt requires each database connection to be used only in the thread that
+    // created it.  The connection stored in 'database' was constructed on the
+    // main thread, so we must NOT open/use it here.  Instead, read the database
+    // file path from the stored handle (safe: just reads a QString) and create
+    // a brand-new, uniquely named connection for this worker thread.
+    const QString dbPath = database.databaseName();
+    static std::atomic<int> s_connCounter{0}; // unique suffix per invocation
+    const QString connName =
+        QStringLiteral("bmdbupdate_%1").arg(s_connCounter.fetch_add(1));
+    database = QSqlDatabase::addDatabase("QSQLITE", connName);
+    database.setDatabaseName(dbPath);
+    if (!database.open()) {
+        qWarning() << "BmDbUpdateThread::run: failed to open thread-local DB connection:"
+                   << database.lastError().text();
+        database = QSqlDatabase();
+        QSqlDatabase::removeDatabase(connName);
+        return;
+    }
     qInfo() << database.lastError();
     TagReader reader;
     emit progressMaxChanged(0);
@@ -122,10 +140,18 @@ void BmDbUpdateThread::run()
     qInfo() << query.lastError();
     emit progressMessage("Finished processing files for directory: " + m_path);
     database.close();
+    // Release the QSqlDatabase handle before removing the connection, as Qt
+    // requires no live handles to remain when removeDatabase() is called.
+    database = QSqlDatabase();
+    QSqlDatabase::removeDatabase(connName);
 }
 
 void BmDbUpdateThread::startUnthreaded()
 {
+    // Ensure all SQL operations in this method use the default (main-thread) connection,
+    // which is already open.  The cloned connection stored in 'database' from the
+    // constructor is never opened, so we replace it here with the active connection.
+    database = QSqlDatabase::database();
     TagReader reader;
     emit progressMaxChanged(0);
     emit progressChanged(0);
@@ -133,7 +159,7 @@ void BmDbUpdateThread::startUnthreaded()
     emit stateChanged("Finding media files...");
     QStringList files = findMediaFiles(m_path);
     emit progressMessage("Found " + QString::number(files.size()) + " files.");
-    QSqlQuery query;
+    QSqlQuery query(database);
     emit stateChanged("Getting metadata and adding songs to the database");
     emit progressMessage("Getting metadata and adding songs to the database");
     emit progressMaxChanged(files.size());

@@ -30,6 +30,7 @@
 #include "mzarchive.h"
 #include "tagreader.h"
 #include "karaokefileinfo.h"
+#include <atomic>
 
 SourceDir::NamingPattern g_pattern;
 int g_customPatternId, g_artistCaptureGrp, g_titleCaptureGrp, g_songIdCaptureGrp;
@@ -44,7 +45,7 @@ bool DbUpdateThread::dbEntryExists(QString filepath)
 //    database.setDatabaseName(QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QDir::separator() + "openkj.sqlite");
 //    database.open();
 //    qInfo() << "Created";
-    QSqlQuery query;
+    QSqlQuery query(database);
     query.prepare("select exists(select 1 from dbsongs where path = :filepath)");
     query.bindValue(":filepath", filepath);
     query.exec();
@@ -142,7 +143,7 @@ QStringList DbUpdateThread::findKaraokeFiles(QString directory)
     int notInDb = 0;
     int total = 0;
     qInfo() << "Creating query";
-    QSqlQuery query;
+    QSqlQuery query(database);
     qInfo() << "Created";
     bool alreadyInDb = false;
     query.prepare("SELECT songid FROM dbsongs WHERE path = :filepath AND discid != '!!DROPPED!!' LIMIT 1");
@@ -207,7 +208,7 @@ QStringList DbUpdateThread::getMissingDbFiles()
 //    database.open();
 //    qInfo() << "Created";
     QStringList files;
-    QSqlQuery query;
+    QSqlQuery query(database);
     query.exec("SELECT path from dbsongs");
     while (query.next())
     {
@@ -235,7 +236,7 @@ QStringList DbUpdateThread::getDragDropFiles()
 //    database.open();
 //    qInfo() << "Created";
     QStringList files;
-    QSqlQuery query;
+    QSqlQuery query(database);
     query.exec("SELECT path from dbsongs WHERE discid = '!!DROPPED!!'");
     while (query.next())
     {
@@ -353,6 +354,10 @@ int DbUpdateThread::addDroppedFile(QString path)
 
 void DbUpdateThread::startUnthreaded()
 {
+    // Ensure all SQL operations in this method use the default (main-thread) connection,
+    // which is already open. The cloned connection stored in 'database' from the
+    // constructor is never opened, so we replace it here with the active connection.
+    database = QSqlDatabase::database();
     emit progressChanged(0);
     emit progressMaxChanged(0);
     emit stateChanged("Verifing that files in DB are present on disk");
@@ -361,7 +366,7 @@ void DbUpdateThread::startUnthreaded()
     QStringList newSongs = findKaraokeFiles(path);
     QStringList dragDropFiles = getDragDropFiles();
     qInfo() << "Creating QSqlQuery";
-    QSqlQuery query;
+    QSqlQuery query(database);
     qInfo() << "Created";
 
     // Try to find out if any of the new files found have been moved and fix the db entry
@@ -604,7 +609,25 @@ void DbUpdateThread::run()
 {
     emit databaseAboutToUpdate();
 
-    database.open();
+    // Qt requires each database connection to be used only in the thread that
+    // created it.  The connection stored in 'database' was constructed on the
+    // main thread, so we must NOT open/use it here.  Instead, read the database
+    // file path from the stored handle (safe: just reads a QString) and create
+    // a brand-new, uniquely named connection for this worker thread.
+    const QString dbPath = database.databaseName();
+    static std::atomic<int> s_connCounter{0}; // unique suffix per invocation
+    const QString connName =
+        QStringLiteral("dbupdate_%1").arg(s_connCounter.fetch_add(1));
+    database = QSqlDatabase::addDatabase("QSQLITE", connName);
+    database.setDatabaseName(dbPath);
+    if (!database.open()) {
+        qWarning() << "DbUpdateThread::run: failed to open thread-local DB connection:"
+                   << database.lastError().text();
+        database = QSqlDatabase();
+        QSqlDatabase::removeDatabase(connName);
+        emit databaseUpdateComplete();
+        return;
+    }
     emit progressChanged(0);
     emit progressMaxChanged(0);
     emit stateChanged("Verifing that files in DB are present on disk");
@@ -613,11 +636,6 @@ void DbUpdateThread::run()
     QStringList newSongs = findKaraokeFiles(path);
     QStringList dragDropFiles = getDragDropFiles();
 
-//    qInfo() << "Creating thread db connection";
-//    QSqlDatabase database = genUniqueDbConn();
-////    database.setDatabaseName(QStandardPaths::writableLocation(QStandardPaths::DataLocation) + QDir::separator() + "openkj.sqlite");
-//    database.open();
-//    qInfo() << "Created";
     qInfo() << "Creating QSqlQuery";
     QSqlQuery query(database);
     qInfo() << "Created";
@@ -836,8 +854,6 @@ void DbUpdateThread::run()
 
     }
     qInfo() << "Done looping";
-//    delete process;
-//    delete archive;
     qInfo() << "Committing transaction";
     database.commit();
     qInfo() << "QSqlDatabase last error: " << database.lastError();
@@ -848,9 +864,9 @@ void DbUpdateThread::run()
         emit errorsGenerated(errors);
     }
     database.close();
+    // Release the QSqlDatabase handle before removing the connection, as Qt
+    // requires no live handles to remain when removeDatabase() is called.
+    database = QSqlDatabase();
+    QSqlDatabase::removeDatabase(connName);
     emit databaseUpdateComplete();
-//    qInfo() << "Removing thread db connection";
-//    query.clear();
-//    QSqlDatabase::removeDatabase(database.connectionName());
-//    qInfo() << "Removed";
 }
