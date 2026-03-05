@@ -367,6 +367,8 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
                             VERBATIM
                             ARGS
                             "${CMAKE_BINARY_DIR}/openkj.app"
+                            -executable=${CMAKE_BINARY_DIR}/openkj.app/Contents/MacOS/openkj
+                            -always-overwrite
                             -codesign=${MAC_SIGNING_IDENTITY}
                             "-appstore-compliant"
                     )
@@ -374,7 +376,10 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
                     add_custom_command(
                             TARGET openkj
                             COMMAND "${MACDEPLOYQT}"
-                            ARGS "${CMAKE_BINARY_DIR}/openkj.app"
+                            ARGS
+                            "${CMAKE_BINARY_DIR}/openkj.app"
+                            -executable=${CMAKE_BINARY_DIR}/openkj.app/Contents/MacOS/openkj
+                            -always-overwrite
                     )
                 endif ()
             else ()
@@ -387,13 +392,16 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         if (DEFINED BUNDLE_GSTREAMER)
             message("Installing GStreamer framework into app bundle")
             install(
-                    DIRECTORY "/Library/Frameworks/GStreamer.framework.dist"
+                    DIRECTORY "/Library/Frameworks/GStreamer.framework"
                     DESTINATION "openkj.app/Contents/Frameworks/GStreamer.framework"
+                    PATTERN "Headers" EXCLUDE
+                    PATTERN "*.dSYM" EXCLUDE
+                    PATTERN "*.a" EXCLUDE
             )
             add_custom_command(
                     TARGET openkj
                     POST_BUILD
-                    COMMAND "cp" ARGS "-pR" "/Library/Frameworks/GStreamer.framework.dist" "openkj.app/Contents/Frameworks/GStreamer.framework"
+                    COMMAND "rsync" ARGS "-a" "--exclude=Headers" "--exclude=*.dSYM" "--exclude=*.a" "/Library/Frameworks/GStreamer.framework/" "openkj.app/Contents/Frameworks/GStreamer.framework"
                     COMMAND "osxrelocator" ARGS "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/lib" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
                     COMMAND "osxrelocator" ARGS "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/libexec" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../../../../../../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
                     COMMAND "osxrelocator" ARGS "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/bin" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../../../../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
