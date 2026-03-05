@@ -77,7 +77,7 @@ bool isDarkTheme(int index)
 void initializeStyle(int themeIndex)
 {
     if (themeIndex < 0 || themeIndex >= kThemeCount)
-        themeIndex = Dark;
+        themeIndex = DefaultThemeIndex;
 
 #ifdef USE_QLEMENTINE
     auto *style = new oclero::qlementine::QlementineStyle(qApp);
@@ -114,7 +114,7 @@ void initializeStyle(int themeIndex)
 void applyTheme(int themeIndex)
 {
     if (themeIndex < 0 || themeIndex >= kThemeCount)
-        themeIndex = Dark;
+        themeIndex = DefaultThemeIndex;
 
 #ifdef USE_QLEMENTINE
     if (sStyle) {

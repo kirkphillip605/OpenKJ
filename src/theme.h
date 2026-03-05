@@ -36,6 +36,9 @@ enum ThemeIndex {
     Amber        = 5
 };
 
+// The default theme used when the stored preference is invalid.
+static constexpr int DefaultThemeIndex = Dark;
+
 // Returns the list of human-readable theme display names.
 QStringList availableThemeNames();
 

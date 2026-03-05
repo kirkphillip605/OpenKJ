@@ -19,6 +19,7 @@
 */
 
 #include "settings.h"
+#include "theme.h"
 #include <QCoreApplication>
 #include <QApplication>
 // (QDesktopWidget removed — no longer used; use QGuiApplication::screens() instead)
@@ -1193,7 +1194,7 @@ void Settings::setTouchFriendlyEnabled(bool enabled) {
 }
 
 int Settings::appTheme() {
-    return settings->value("appTheme", 1).toInt();
+    return settings->value("appTheme", AppTheme::DefaultThemeIndex).toInt();
 }
 
 void Settings::setAppTheme(int theme) {
