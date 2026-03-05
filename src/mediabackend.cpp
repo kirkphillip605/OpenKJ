@@ -256,15 +256,18 @@ void MediaBackend::play()
             gst_element_link(m_queueMainVideo, m_videoTee);
         }
 
-        // Use m_cdgAppSrc as source for video. m_decoder will still be used for audio file
+        allowMissingAudio = m_type == VideoPreview;
+
+        // Configure upscaling and load the CDG file BEFORE adding
+        // the element to the pipeline and patching sinks, so that
+        // caps are stable and data is ready when streaming threads start.
+        m_cdgSrc->setUpscalingEnabled(settings.cdgUpscalingEnabled());
+        m_cdgSrc->load(m_cdgFilename);
+
+        // Now add to pipeline and link — caps are already correct and data is ready
         gst_bin_add(reinterpret_cast<GstBin*>(m_pipeline), m_cdgSrc->getSrcElement());
         m_videoSrcPad = new PadInfo { m_cdgSrc->getSrcElement(), "src" };
         patchPipelineSinks();
-
-        allowMissingAudio = m_type == VideoPreview;
-
-        m_cdgSrc->setUpscalingEnabled(settings.cdgUpscalingEnabled());
-        m_cdgSrc->load(m_cdgFilename);
 
         qInfo() << m_objName << " - play - playing cdg:   " << m_cdgFilename;
     } else {
