@@ -16,16 +16,8 @@ CdgAppSrc::CdgAppSrc()
     m_cdgAppSrc = reinterpret_cast<GstAppSrc*>(gst_element_factory_make("appsrc", "cdgAppSrc"));
     g_object_ref(m_cdgAppSrc);
 
-    auto appSrcCaps = gst_caps_new_simple(
-                "video/x-raw",
-                "format", G_TYPE_STRING, "BGRA",
-                "width",  G_TYPE_INT, SCALED_WIDTH,
-                "height", G_TYPE_INT, SCALED_HEIGHT,
-                "pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
-                NULL);
-
-    g_object_set(m_cdgAppSrc, "caps", appSrcCaps, NULL);
-    gst_caps_unref(appSrcCaps);
+    // Default: original CDG format (no upscaling)
+    updateCaps();
 
     g_object_set(m_cdgAppSrc, "stream-type", GST_APP_STREAM_TYPE_SEEKABLE, "format", GST_FORMAT_TIME, NULL);
     gst_app_src_set_max_bytes(m_cdgAppSrc, static_cast<guint64>(SCALED_WIDTH) * SCALED_HEIGHT * BYTES_PER_PIXEL * 4);
@@ -60,8 +52,38 @@ void CdgAppSrc::load(const QString filename)
 {
     QMutexLocker locker(&m_cdgFileReaderLock);
     reset();
+    updateCaps();
     m_cdgFileReader = new CdgFileReader(filename);
     gst_app_src_set_duration(m_cdgAppSrc, m_cdgFileReader->getTotalDurationMS() * GST_MSECOND);
+}
+
+void CdgAppSrc::setUpscalingEnabled(bool enabled)
+{
+    m_upscalingEnabled = enabled;
+}
+
+void CdgAppSrc::updateCaps()
+{
+    GstCaps *appSrcCaps;
+    if (m_upscalingEnabled) {
+        appSrcCaps = gst_caps_new_simple(
+                    "video/x-raw",
+                    "format", G_TYPE_STRING, "BGRA",
+                    "width",  G_TYPE_INT, SCALED_WIDTH,
+                    "height", G_TYPE_INT, SCALED_HEIGHT,
+                    "pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
+                    NULL);
+    } else {
+        appSrcCaps = gst_caps_new_simple(
+                    "video/x-raw",
+                    "format", G_TYPE_STRING, "RGB8P",
+                    "width",  G_TYPE_INT, cdg::FRAME_DIM_CROPPED.width(),
+                    "height", G_TYPE_INT, cdg::FRAME_DIM_CROPPED.height(),
+                    "pixel-aspect-ratio", GST_TYPE_FRACTION, 1, 1,
+                    NULL);
+    }
+    g_object_set(m_cdgAppSrc, "caps", appSrcCaps, NULL);
+    gst_caps_unref(appSrcCaps);
 }
 
 int CdgAppSrc::positionOfFinalFrameMS()
@@ -83,17 +105,27 @@ void CdgAppSrc::cb_need_data(GstAppSrc *appsrc, [[maybe_unused]]guint unused_siz
     {
         if(instance->m_cdgFileReader->moveToNextFrame())
         {
-            // Apply xBRZ 5x upscale: 300x216 -> 1500x1080
-            const auto* srcPixels = reinterpret_cast<const uint32_t*>(
-                instance->m_cdgFileReader->currentFrameARGB32Bits());
-            constexpr gsize scaledSize = static_cast<gsize>(SCALED_WIDTH) * SCALED_HEIGHT * BYTES_PER_PIXEL;
-            std::vector<uint32_t> scaledBuf(static_cast<size_t>(SCALED_WIDTH) * SCALED_HEIGHT);
-            xbrz::scale(XBRZ_SCALE_FACTOR, srcPixels, scaledBuf.data(),
-                        cdg::FRAME_DIM_FULL.width(), cdg::FRAME_DIM_FULL.height(),
-                        xbrz::ColorFormat::ARGB);
+            GstBuffer *buffer;
+            if (instance->m_upscalingEnabled) {
+                // Apply xBRZ 5x upscale: 300x216 -> 1500x1080
+                const auto* srcPixels = reinterpret_cast<const uint32_t*>(
+                    instance->m_cdgFileReader->currentFrameARGB32Bits());
+                constexpr gsize scaledSize = static_cast<gsize>(SCALED_WIDTH) * SCALED_HEIGHT * BYTES_PER_PIXEL;
+                std::vector<uint32_t> scaledBuf(static_cast<size_t>(SCALED_WIDTH) * SCALED_HEIGHT);
+                xbrz::scale(XBRZ_SCALE_FACTOR, srcPixels, scaledBuf.data(),
+                            cdg::FRAME_DIM_FULL.width(), cdg::FRAME_DIM_FULL.height(),
+                            xbrz::ColorFormat::ARGB);
 
-            auto buffer = gst_buffer_new_and_alloc(scaledSize);
-            gst_buffer_fill(buffer, 0, scaledBuf.data(), scaledSize);
+                buffer = gst_buffer_new_and_alloc(scaledSize);
+                gst_buffer_fill(buffer, 0, scaledBuf.data(), scaledSize);
+            } else {
+                // Original CDG rendering: push indexed (RGB8P) data at cropped dimensions
+                buffer = gst_buffer_new_and_alloc(cdg::CDG_IMAGE_SIZE);
+                gst_buffer_fill(buffer,
+                                0,
+                                instance->m_cdgFileReader->currentFrame().data(),
+                                cdg::CDG_IMAGE_SIZE);
+            }
 
             GST_BUFFER_PTS(buffer) = instance->m_cdgFileReader->currentFramePositionMS() * GST_MSECOND;
             GST_BUFFER_DURATION(buffer) = instance->m_cdgFileReader->currentFrameDurationMS() * GST_MSECOND;

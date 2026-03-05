@@ -335,6 +335,16 @@
                  </widget>
                 </item>
                 <item>
+                 <widget class="QCheckBox" name="checkBoxCdgUpscaling">
+                  <property name="toolTip">
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enables xBRZ pixel-art upscaling on CDG graphics (300×216 → 1500×1080). Produces very sharp output but significantly increases CPU load. When disabled, CDG tracks play using the original rendering pipeline.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                  <property name="text">
+                   <string>CDG Upscaling (xBRZ 5x pixel-art upscaler)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
                  <widget class="QCheckBox" name="checkBoxEnforceAspectRatio">
                   <property name="toolTip">
                    <string>If enabled, videos will respect the source aspect ratio when being stretched to fit the window.</string>

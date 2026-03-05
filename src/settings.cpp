@@ -665,6 +665,14 @@ void Settings::setCdgPrescalingEnabled(bool enabled) {
     settings->setValue("cdgPrescaling", enabled);
 }
 
+bool Settings::cdgUpscalingEnabled() {
+    return settings->value("cdgUpscaling", false).toBool();
+}
+
+void Settings::setCdgUpscalingEnabled(bool enabled) {
+    settings->setValue("cdgUpscaling", enabled);
+}
+
 void Settings::setSlideShowInterval(int secs) {
     if (secs <= 5) {
         settings->setValue("slideShowInterval", 5);
