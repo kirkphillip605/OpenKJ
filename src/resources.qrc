@@ -173,4 +173,12 @@
         <file>Icons/okjbreeze-dark/actions/22/media-playlist-append.svg</file>
     </qresource>
     <qresource prefix="/"/>
+    <qresource prefix="/themes">
+        <file>themes/light.json</file>
+        <file>themes/dark.json</file>
+        <file>themes/midnight-blue.json</file>
+        <file>themes/charcoal.json</file>
+        <file>themes/forest.json</file>
+        <file>themes/amber.json</file>
+    </qresource>
 </RCC>

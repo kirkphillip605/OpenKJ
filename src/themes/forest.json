@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "author": "OpenKJ",
+    "name": "Forest",
+    "version": "1.0.0"
+  },
+
+  "backgroundColorMain1": "#14201a",
+  "backgroundColorMain2": "#1a2a22",
+  "backgroundColorMain3": "#22362c",
+  "backgroundColorMain4": "#22362c",
+
+  "backgroundColorWorkspace": "#0e1812",
+  "backgroundColorTabBar": "#121e18",
+
+  "borderColor": "#2e4a3a",
+  "borderColorHovered": "#3a5e4a",
+  "borderColorPressed": "#4a7260",
+  "borderColorDisabled": "#1e302a",
+
+  "focusColor": "#40dd886a",
+
+  "neutralColor": "#2e4a3c",
+  "neutralColorHovered": "#365848",
+  "neutralColorPressed": "#3e6452",
+  "neutralColorDisabled": "#1e302a",
+
+  "primaryColor": "#30b878",
+  "primaryColorHovered": "#40c888",
+  "primaryColorPressed": "#50d898",
+  "primaryColorDisabled": "#1c3028",
+
+  "primaryAlternativeColor": "#28a068",
+  "primaryAlternativeColorHovered": "#32b078",
+  "primaryAlternativeColorPressed": "#40c088",
+  "primaryAlternativeColorDisabled": "#1a2c24",
+
+  "primaryColorForeground": "#ffffff",
+  "primaryColorForegroundHovered": "#ffffff",
+  "primaryColorForegroundPressed": "#ffffff",
+  "primaryColorForegroundDisabled": "#385848",
+
+  "secondaryColor": "#e0f0e8",
+  "secondaryColorHovered": "#c8e0d4",
+  "secondaryColorPressed": "#d8ece0",
+  "secondaryColorDisabled": "#e0f0e830",
+
+  "secondaryAlternativeColor": "#5a8070",
+  "secondaryAlternativeColorHovered": "#709888",
+  "secondaryAlternativeColorPressed": "#80a898",
+  "secondaryAlternativeColorDisabled": "#50786838",
+
+  "secondaryColorForeground": "#1a2a22",
+  "secondaryColorForegroundHovered": "#1a2a22",
+  "secondaryColorForegroundPressed": "#1a2a22",
+  "secondaryColorForegroundDisabled": "#1a2a223f",
+
+  "semiTransparentColor1": "#80ffc018",
+  "semiTransparentColor2": "#80ffc023",
+  "semiTransparentColor3": "#80ffc028",
+  "semiTransparentColor4": "#80ffc02d",
+
+  "shadowColor1": "#00000066",
+  "shadowColor2": "#000000bb",
+  "shadowColor3": "#000000ff",
+
+  "statusColorForeground": "#ffffff",
+  "statusColorForegroundHovered": "#ffffff",
+  "statusColorForegroundPressed": "#ffffff",
+  "statusColorForegroundDisabled": "#ffffff26",
+
+  "statusColorError": "#e86868",
+  "statusColorErrorHovered": "#f07878",
+  "statusColorErrorPressed": "#f89090",
+  "statusColorErrorDisabled": "#382028",
+
+  "statusColorInfo": "#28b0d8",
+  "statusColorInfoHovered": "#38bee8",
+  "statusColorInfoPressed": "#48ccf0",
+  "statusColorInfoDisabled": "#182838",
+
+  "statusColorSuccess": "#30c090",
+  "statusColorSuccessHovered": "#40d0a0",
+  "statusColorSuccessPressed": "#50e0b0",
+  "statusColorSuccessDisabled": "#1c3028",
+
+  "statusColorWarning": "#f8c060",
+  "statusColorWarningHovered": "#ffd070",
+  "statusColorWarningPressed": "#ffe088",
+  "statusColorWarningDisabled": "#302820"
+}

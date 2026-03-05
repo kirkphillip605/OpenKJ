@@ -3812,7 +3812,7 @@ void MainWindow::on_actionSong_Shop_triggered() {
 
 void MainWindow::applyAppTheme(int themeIndex)
 {
-    AppTheme::applyTheme(static_cast<AppTheme::ThemeId>(themeIndex));
+    AppTheme::applyTheme(themeIndex);
 }
 
 void MainWindow::applyTouchFriendly(bool enabled)

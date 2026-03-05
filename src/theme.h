@@ -21,19 +21,40 @@
 #define THEME_H
 
 #include <QString>
+#include <QStringList>
 
 namespace AppTheme {
 
-enum class ThemeId {
-    Default = 0,
-    Modern  = 1
+// Available theme indices.
+// Index 0 is always Light; the rest are dark variants.
+enum ThemeIndex {
+    Light        = 0,
+    Dark         = 1,
+    MidnightBlue = 2,
+    Charcoal     = 3,
+    Forest       = 4,
+    Amber        = 5
 };
 
-// Returns the QSS stylesheet for the given theme, or an empty string for Default.
-QString stylesheetForTheme(ThemeId id);
+// The default theme used when the stored preference is invalid.
+static constexpr int DefaultThemeIndex = Dark;
 
-// Applies the chosen theme stylesheet to qApp.
-void applyTheme(ThemeId id);
+// Returns the list of human-readable theme display names.
+QStringList availableThemeNames();
+
+// Returns the resource path to the JSON theme file for the given index.
+QString themeJsonPath(int index);
+
+// Returns true if the given theme index is a dark theme.
+bool isDarkTheme(int index);
+
+// Initializes and globally applies the Qlementine style engine
+// with the theme at the given index.  Must be called after
+// QApplication is constructed.
+void initializeStyle(int themeIndex);
+
+// Switches the active theme at runtime (no restart required).
+void applyTheme(int themeIndex);
 
 } // namespace AppTheme
 
