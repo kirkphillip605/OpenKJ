@@ -108,12 +108,11 @@ private:
     QTimer m_timerButtonShow;
     QTimer m_timerSlideShow;
     MediaBackend *m_kmb;
-    MediaBackend *m_bmb;
     TransparentWidget *tWidget;
     bool m_hiddenByScreenRemoval{false};
 
 public:
-    explicit DlgCdg(MediaBackend *KaraokeBackend, MediaBackend *BreakBackend, QWidget *parent = nullptr, Qt::WindowFlags f = QFlags<Qt::WindowType>());
+    explicit DlgCdg(MediaBackend *KaraokeBackend, QWidget *parent = nullptr, Qt::WindowFlags f = QFlags<Qt::WindowType>());
     ~DlgCdg();
     void setTickerText(const QString &text);
     void stopTicker();

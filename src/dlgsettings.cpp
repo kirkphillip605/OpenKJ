@@ -59,7 +59,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, QWidget *parent) :
     ui->checkBoxMonitorDirs->setChecked(settings.dbDirectoryWatchEnabled());
     ui->groupBoxShowDuration->setChecked(settings.cdgRemainEnabled());
     ui->cbxRotShowNextSong->setChecked(settings.rotationShowNextSong());
-    ui->checkBoxCdgPrescaling->setChecked(settings.cdgPrescalingEnabled());
     ui->checkBoxCurrentSingerTop->setChecked(settings.rotationAltSortOrder());
     audioOutputDevices = kAudioBackend->getOutputDevices();
     ui->comboBoxKAudioDevices->addItems(audioOutputDevices);
@@ -167,7 +166,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, QWidget *parent) :
     ui->lineEditLogDir->setText(settings.logDir());
     ui->checkBoxEnforceAspectRatio->setChecked(settings.enforceAspectRatio());
     ui->checkBoxTreatAllSingersAsRegs->setChecked(settings.treatAllSingersAsRegs());
-    ui->cbxCrossFade->setChecked(settings.bmKCrossFade());
     adjustSize();
     connect(ui->spinBoxCdgOffsetTop, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setCdgOffsetTop);
     connect(ui->spinBoxCdgOffsetBottom, QOverload<int>::of(&QSpinBox::valueChanged), &settings, &Settings::setCdgOffsetBottom);
@@ -181,7 +179,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, QWidget *parent) :
     connect(&settings, &Settings::showSongInterruptionWarningChanged, ui->cbxSongInterruptionWarning, &QCheckBox::setChecked);
     connect(&settings, &Settings::showSongStopPauseWarningChanged, ui->cbxStopPauseWarning, &QCheckBox::setChecked);
     connect(ui->cbxIgnoreApos, &QCheckBox::toggled, &settings, &Settings::setIgnoreAposInSearch);
-    connect(ui->cbxCrossFade, &QCheckBox::clicked, &settings, &Settings::setBmKCrossfade);
     connect(ui->cbxCheckUpdates, &QCheckBox::clicked, &settings, &Settings::setCheckUpdates);
     connect(ui->comboBoxUpdateBranch, QOverload<int>::of(&QComboBox::currentIndexChanged), &settings, &Settings::setUpdatesBranch);
     connect(ui->checkBoxDbSkipValidation, &QCheckBox::toggled, &settings, &Settings::dbSetSkipValidation);
@@ -784,15 +781,6 @@ void DlgSettings::on_checkBoxHardwareAccel_toggled(bool checked) {
     if (!m_pageSetupDone)
         return;
     settings.setHardwareAccelEnabled(checked);
-}
-
-void DlgSettings::on_checkBoxCdgPrescaling_stateChanged(int arg1) {
-    if (!m_pageSetupDone)
-        return;
-    if (arg1 == 0)
-        settings.setCdgPrescalingEnabled(false);
-    else
-        settings.setCdgPrescalingEnabled(true);
 }
 
 void DlgSettings::on_checkBoxCurrentSingerTop_toggled(bool checked) {

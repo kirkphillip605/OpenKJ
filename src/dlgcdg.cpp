@@ -39,8 +39,8 @@ VideoDisplay *DlgCdg::getVideoDisplayBm()
     return ui->videoDisplayBm;
 }
 
-DlgCdg::DlgCdg(MediaBackend *KaraokeBackend, MediaBackend *BreakBackend, QWidget *parent, Qt::WindowFlags f) :
-    QDialog(parent, f), ui(new Ui::DlgCdg), m_kmb(KaraokeBackend), m_bmb(BreakBackend)
+DlgCdg::DlgCdg(MediaBackend *KaraokeBackend, QWidget *parent, Qt::WindowFlags f) :
+    QDialog(parent, f), ui(new Ui::DlgCdg), m_kmb(KaraokeBackend)
 {
     ui->setupUi(this);
     tWidget = new TransparentWidget(this);
@@ -247,14 +247,8 @@ void DlgCdg::showAlert(bool show)
     else
     {
         ui->widgetAlert->hide();
-        if (m_bmb->hasActiveVideo() && !m_kmb->hasActiveVideo()) {
-            ui->videoDisplayBm->show();
-            ui->videoDisplayKar->hide();
-        }
-        else {
-            ui->videoDisplayBm->hide();
-            ui->videoDisplayKar->show();
-        }
+        ui->videoDisplayBm->hide();
+        ui->videoDisplayKar->show();
     }
 }
 
