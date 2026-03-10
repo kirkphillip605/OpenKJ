@@ -150,6 +150,8 @@ if(QT_VERSION_MAJOR EQUAL 6)
 endif()
 
 # --- Project Source Files ---
+set_source_files_properties(src/miniz/miniz.c PROPERTIES LANGUAGE C)
+
 set(SOURCE_FILES
         src/miniz/miniz.h
         src/miniz/miniz.c

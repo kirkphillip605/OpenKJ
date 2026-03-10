@@ -25,7 +25,9 @@
 #include <QBuffer>
 #include <QTemporaryDir>
 #include <limits>
-#include "src/miniz/miniz.h"
+extern "C" {
+#include "miniz.h"
+}
 #ifdef Q_OS_WIN
 #include <io.h>
 #else
