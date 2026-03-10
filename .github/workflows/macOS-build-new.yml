@@ -66,7 +66,7 @@ jobs:
       with:
         version: '6.8.0' # Note: Update to 6.10.2 when it becomes available via aqtinstall
         arch: 'clang_64'
-        modules: 'core gui sql network widgets concurrent svg printsupport openglwidgets'
+        modules: 'qtsvg'
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
