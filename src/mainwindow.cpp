@@ -29,6 +29,9 @@
 #include <QImageReader>
 #include <QDesktopServices>
 #include <QScroller>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QSpinBox>
 #include "mzarchive.h"
 #include "tagreader.h"
 #include "dlgeditsong.h"
@@ -264,7 +267,7 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->lblTempo->hide();
     }
     ui->videoPreview->setFillOnPaint(true);
-    cdgWindow = new DlgCdg(&kMediaBackend, nullptr, Qt::Window);
+    cdgWindow = new DlgCdg(&kMediaBackend, this, Qt::Window);
     settings.restoreWindowState(cdgWindow);
 
     connect(&rotModel, &TableModelRotation::songDroppedOnSinger, this, &MainWindow::songDroppedOnSinger);
