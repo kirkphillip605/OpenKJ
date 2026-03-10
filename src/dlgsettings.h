@@ -121,7 +121,6 @@ private slots:
     void on_pushButtonResetDurationPos_clicked();
     void on_lineEditTickerMessage_returnPressed();
     void on_checkBoxHardwareAccel_toggled(bool checked);
-    void on_checkBoxCdgPrescaling_stateChanged(int arg1);
     void on_checkBoxCurrentSingerTop_toggled(bool checked);
     void keySequenceEditChanged(QKeySequence sequence);
     // QWidget interface
