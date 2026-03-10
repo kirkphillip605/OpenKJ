@@ -4,3 +4,9 @@
 [submodule "src/qlementine-icons"]
 	path = src/qlementine-icons
 	url = https://github.com/oclero/qlementine-icons.git
+[submodule "src/taglib"]
+	path = src/taglib
+	url = https://github.com/taglib/taglib.git
+[submodule "src/miniz"]
+	path = src/miniz
+	url = https://github.com/richgel999/miniz.git
