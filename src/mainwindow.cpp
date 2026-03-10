@@ -123,15 +123,6 @@ void MainWindow::updateIcons() {
     ui->pushButtonKeyUp->setIcon(QIcon(thm + "actions/22/upindicator.svg"));
     ui->btnSfxStop->setIcon(QIcon(thm + "actions/22/media-playback-stop.svg"));
 
-    ui->buttonBmPause->setIcon(QIcon(thm + "actions/22/media-playback-pause.svg"));
-    ui->buttonBmStop->setIcon(QIcon(thm + "actions/22/media-playback-stop.svg"));
-    ui->btnPlTop->setIcon(QIcon(thm + "actions/22/go-top.svg"));
-    ui->btnPlUp->setIcon(QIcon(thm + "actions/22/go-up.svg"));
-    ui->btnPlBottom->setIcon(QIcon(thm + "actions/22/go-bottom.svg"));
-    ui->btnPlDown->setIcon(QIcon(thm + "actions/22/go-down.svg"));
-    ui->labelVolumeBm->setPixmap(QPixmap(thm + "actions/16/player-volume.svg"));
-    ui->buttonBmSearch->setIcon(QIcon(thm + "actions/22/edit-find.svg"));
-
     requestsDialog->updateIcons();
     connect(&settings, &Settings::treatAllSingersAsRegsChanged, this, &MainWindow::treatAllSingersAsRegsChanged);
     treatAllSingersAsRegsChanged(settings.treatAllSingersAsRegs());
@@ -173,18 +164,14 @@ MainWindow::MainWindow(QWidget *parent) :
 #endif
     debugDialog = new DlgDebugOutput(this);
     debugDialog->setVisible(settings.logShow());
-    shop = new SongShop(this);
     QCoreApplication::setOrganizationName("OpenKJ");
     QCoreApplication::setOrganizationDomain("OpenKJ.org");
     QCoreApplication::setApplicationName("OpenKJ");
     ui->setupUi(this);
     setMouseTracking(true);
-    ui->tableViewBmPlaylist->setMouseTracking(true);
     historyTabWidget = ui->tabWidgetQueue->widget(1);
     ui->actionShow_Debug_Log->setChecked(settings.logShow());
 #ifdef Q_OS_WIN
-    ui->sliderBmPosition->setMaximumHeight(12);
-    ui->sliderBmVolume->setMaximumWidth(12);
     ui->sliderProgress->setMaximumHeight(12);
 #endif
     QDir okjDataDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
@@ -195,15 +182,13 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->pushButtonIncomingRequests->setStyleSheet("");
         update();
     }
-    ui->videoPreviewBm->hide();
     ui->pushButtonKeyDn->setEnabled(false);
     ui->pushButtonKeyUp->setEnabled(false);
     ui->pushButtonTempoDn->setEnabled(false);
     ui->pushButtonTempoUp->setEnabled(false);
     songbookApi = new OKJSongbookAPI(this);
     int initialKVol = settings.audioVolume();
-    int initialBMVol = settings.bmVolume();
-    qInfo() << "Initial volumes - K: " << initialKVol << " BM: " << initialBMVol;
+    qInfo() << "Initial volumes - K: " << initialKVol;
     QTimer::singleShot(250, [&]() {
         settings.restoreWindowState(this);
     });
@@ -266,8 +251,6 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->tableViewRotation->selectRow(pos);
         ui->lineEdit->setFocus();
     });
-    dlgSongShop = new DlgSongShop(shop);
-    dlgSongShop->setModal(false);
     ui->tableViewDB->setModel(&karaokeSongsModel);
     ui->tableViewDB->viewport()->installEventFilter(new TableViewToolTipFilter(ui->tableViewDB));
     kMediaBackend.setUseFader(settings.audioUseFader());
@@ -281,7 +264,7 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->lblTempo->hide();
     }
     ui->videoPreview->setFillOnPaint(true);
-    cdgWindow = new DlgCdg(&kMediaBackend, &bmMediaBackend, nullptr, Qt::Window);
+    cdgWindow = new DlgCdg(&kMediaBackend, nullptr, Qt::Window);
     settings.restoreWindowState(cdgWindow);
 
     connect(&rotModel, &TableModelRotation::songDroppedOnSinger, this, &MainWindow::songDroppedOnSinger);
@@ -300,18 +283,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&kMediaBackend, &MediaBackend::pitchChanged, ui->spinBoxKey, &QSpinBox::setValue);
     connect(&kMediaBackend, &MediaBackend::audioError, this, &MainWindow::audioError);
     connect(&kMediaBackend, &MediaBackend::silenceDetected, this, &MainWindow::silenceDetectedKar);
-    connect(&bmMediaBackend, &MediaBackend::audioError, this, &MainWindow::audioError);
-    connect(&bmMediaBackend, &MediaBackend::silenceDetected, this, &MainWindow::silenceDetectedBm);
-    connect(&bmMediaBackend, &MediaBackend::hasActiveVideoChanged, [=](const bool &isActive) {
-        m_bmHasActiveVideo = isActive;
-        hasActiveVideoChanged();
-    });
     connect(&sfxMediaBackend, &MediaBackend::positionChanged, this, &MainWindow::sfxAudioBackend_positionChanged);
     connect(&sfxMediaBackend, &MediaBackend::durationChanged, this, &MainWindow::sfxAudioBackend_durationChanged);
     connect(&sfxMediaBackend, &MediaBackend::stateChanged, this, &MainWindow::sfxAudioBackend_stateChanged);
     connect(&rotModel, &TableModelRotation::rotationModified, this, &MainWindow::rotationDataChanged);
     connect(&settings, &Settings::tickerOutputModeChanged, this, &MainWindow::rotationDataChanged);
-    connect(shop, &SongShop::karaokeSongDownloaded, dbDialog, &DlgDatabase::singleSongAdd);
     kMediaBackend.setUseFader(settings.audioUseFader());
 
     kMediaBackend.setUseSilenceDetection(settings.audioDetectSilence());
@@ -319,21 +295,15 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->pushButtonTempoUp, &QPushButton::clicked, ui->spinBoxTempo, &QSpinBox::stepUp);
     connect(ui->pushButtonKeyDn, &QPushButton::clicked, ui->spinBoxKey, &QSpinBox::stepDown);
     connect(ui->pushButtonKeyUp, &QPushButton::clicked, ui->spinBoxKey, &QSpinBox::stepUp);
-    bmMediaBackend.setUseFader(settings.audioUseFaderBm());
-    bmMediaBackend.setUseSilenceDetection(settings.audioDetectSilenceBm());
 
     kMediaBackend.setDownmix(settings.audioDownmix());
-    bmMediaBackend.setDownmix(settings.audioDownmixBm());
     connect(requestsDialog, &DlgRequests::addRequestSong, &qModel, &TableModelQueueSongs::songAddSlot);
     connect(&settings, &Settings::tickerCustomStringChanged, this, &MainWindow::rotationDataChanged);
 
     settings.restoreWindowState(requestsDialog);
-    settings.restoreWindowState(dlgSongShop);
     settings.restoreWindowState(dbDialog);
     settings.restoreSplitterState(ui->splitter);
     settings.restoreSplitterState(ui->splitter_2);
-    settings.restoreSplitterState(ui->splitterBm);
-    settings.restoreWindowState(dlgSongShop);
     rotationDataChanged();
     ui->tableViewDB->hideColumn(TableModelKaraokeSongs::COL_ID);
     ui->tableViewDB->hideColumn(TableModelKaraokeSongs::COL_FILENAME);
@@ -353,43 +323,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addWidget(&labelRotationDuration);
 
 
-    bmPlaylistsModel = new QSqlTableModel(this, database);
-    bmPlaylistsModel->setTable("bmplaylists");
-    bmPlaylistsModel->sort(2, Qt::AscendingOrder);
-    bmDbDialog = new BmDbDialog(database, this);
-    bmCurrentPlaylist = settings.bmPlaylistIndex();
-    ui->comboBoxBmPlaylists->setModel(bmPlaylistsModel);
-    ui->comboBoxBmPlaylists->setModelColumn(1);
-    ui->comboBoxBmPlaylists->setCurrentIndex(settings.bmPlaylistIndex());
-    if (bmPlaylistsModel->rowCount() == 0) {
-        bmAddPlaylist("Default");
-        ui->comboBoxBmPlaylists->setCurrentIndex(0);
-    }
-    ui->tableViewBmDb->setModel(&bmDbModel);
-    bmDbModel.loadDatabase();
-    ui->tableViewBmDb->viewport()->installEventFilter(new TableViewToolTipFilter(ui->tableViewBmDb));
-    ui->tableViewBmPlaylist->setModel(&playlistSongsModel);
-    ui->tableViewBmPlaylist->viewport()->installEventFilter(new TableViewToolTipFilter(ui->tableViewBmPlaylist));
-    ui->tableViewBmPlaylist->setItemDelegate(&bmPlDelegate);
-    ui->actionDisplay_Filenames->setChecked(settings.bmShowFilenames());
-    ui->actionDisplay_Metadata->setChecked(settings.bmShowMetadata());
-    settings.restoreSplitterState(ui->splitterBm);
-    ui->tableViewBmDb->setColumnHidden(TableModelBreakSongs::COL_ID, true);
-    ui->tableViewBmPlaylist->setColumnHidden(TableModelPlaylistSongs::COL_POSITION, true);
     settings.restoreSplitterState(ui->splitter_3);
-    on_actionDisplay_Filenames_toggled(settings.bmShowFilenames());
-    on_actionDisplay_Metadata_toggled(settings.bmShowMetadata());
 
 
-    connect(&bmMediaBackend, &MediaBackend::stateChanged, this, &MainWindow::bmMediaStateChanged);
-    connect(&bmMediaBackend, &MediaBackend::positionChanged, this, &MainWindow::bmMediaPositionChanged);
-    connect(&bmMediaBackend, &MediaBackend::durationChanged, this, &MainWindow::bmMediaDurationChanged);
-    connect(&bmMediaBackend, &MediaBackend::volumeChanged, ui->sliderBmVolume, &QSlider::setValue);
-    connect(bmDbDialog, &BmDbDialog::bmDbUpdated, this, &MainWindow::bmDbUpdated);
-    connect(bmDbDialog, &BmDbDialog::bmDbCleared, this, &MainWindow::bmDbCleared);
-    connect(bmDbDialog, &BmDbDialog::bmDbAboutToUpdate, this, &MainWindow::bmDatabaseAboutToUpdate);
-    ui->sliderBmVolume->setValue(initialBMVol);
-    bmMediaBackend.setVolume(initialBMVol);
     ui->sliderVolume->setValue(initialKVol);
     kMediaBackend.setVolume(initialKVol);
     if (settings.mplxMode() == Multiplex_Normal)
@@ -414,32 +350,23 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&settings, &Settings::eqKBypassChanged, &kMediaBackend, &MediaBackend::setEqBypass);
     connect(&settings, &Settings::eqKLevelChanged, &kMediaBackend, &MediaBackend::setEqLevel);
 
-    connect(&settings, &Settings::eqBBypassChanged, &bmMediaBackend, &MediaBackend::setEqBypass);
-    connect(&settings, &Settings::eqBLevelChanged, &bmMediaBackend, &MediaBackend::setEqLevel);
 
     connect(&settings, &Settings::enforceAspectRatioChanged, &kMediaBackend, &MediaBackend::setEnforceAspectRatio);
-    connect(&settings, &Settings::enforceAspectRatioChanged, &bmMediaBackend, &MediaBackend::setEnforceAspectRatio);
     connect(&settings, &Settings::mplxModeChanged, &kMediaBackend, &MediaBackend::setMplxMode);
     connect(&settings, &Settings::videoOffsetChanged, [&](auto offsetMs) {
         kMediaBackend.setVideoOffset(offsetMs);
-        bmMediaBackend.setVideoOffset(offsetMs);
     });
 
     kMediaBackend.setEnforceAspectRatio(settings.enforceAspectRatio());
-    bmMediaBackend.setEnforceAspectRatio(settings.enforceAspectRatio());
 
     kMediaBackend.setEqBypass(settings.eqKBypass());
-    bmMediaBackend.setEqBypass(settings.eqBBypass());
     for (int band = 0; band < 10; band++) {
         kMediaBackend.setEqLevel(band, settings.getEqKLevel(band));
-        bmMediaBackend.setEqLevel(band, settings.getEqBLevel(band));
     }
 
     connect(ui->lineEdit, &CustomLineEdit::escapePressed, ui->lineEdit, &CustomLineEdit::clear);
-    connect(ui->lineEditBmSearch, &CustomLineEdit::escapePressed, ui->lineEditBmSearch, &CustomLineEdit::clear);
     connect(&qModel, &TableModelQueueSongs::songDroppedWithoutSinger, this, &MainWindow::songDropNoSingerSel);
     connect(ui->splitter_3, &QSplitter::splitterMoved, [&]() { autosizeViews(); });
-    connect(ui->splitterBm, &QSplitter::splitterMoved, [&]() { autosizeBmViews(); });
     checker = new UpdateChecker(this);
     connect(checker, &UpdateChecker::newVersionAvailable, this, &MainWindow::newVersionAvailable);
     checker->checkForUpdates();
@@ -448,7 +375,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->pushButtonIncomingRequests->setVisible(settings.requestServerEnabled());
     connect(&settings, &Settings::requestServerEnabledChanged, ui->pushButtonIncomingRequests,
             &QPushButton::setVisible);
-    connect(ui->actionSong_Shop, &QAction::triggered, [&]() { show(); });
     qInfo() << "Initial UI stup complete";
     connect(&qModel, &TableModelQueueSongs::filesDroppedOnSinger, this, &MainWindow::filesDroppedOnQueue);
     connect(&settings, &Settings::applicationFontChanged, this, &MainWindow::appFontChanged);
@@ -457,9 +383,7 @@ MainWindow::MainWindow(QWidget *parent) :
     appFontChanged(settings.applicationFont());
     QTimer::singleShot(500, [&]() {
         autosizeViews();
-        autosizeBmViews();
     });
-    connect(&playlistSongsModel, &TableModelPlaylistSongs::bmSongMoved, this, &MainWindow::bmSongMoved);
     connect(songbookApi, &OKJSongbookAPI::alertRecieved, this, &MainWindow::showAlert);
     connect(&settings, &Settings::cdgShowCdgWindowChanged, this, &MainWindow::cdgVisibilityChanged);
     connect(&settings, &Settings::rotationShowNextSongChanged, [&]() { resizeRotation(); });
@@ -525,7 +449,6 @@ MainWindow::MainWindow(QWidget *parent) :
             break;
     }
     ui->labelVolume->setPixmap(QIcon::fromTheme("player-volume").pixmap(QSize(22, 22)));
-    ui->labelVolumeBm->setPixmap(QIcon::fromTheme("player-volume").pixmap(QSize(22, 22)));
     updateIcons();
     ui->menuTesting->menuAction()->setVisible(settings.testingEnabled());
 
@@ -554,24 +477,6 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     });
 
-    connect(ui->tableViewBmPlaylist->selectionModel(), &QItemSelectionModel::selectionChanged, [&]() {
-        if (ui->tableViewBmPlaylist->selectionModel()->selectedRows().empty()) {
-            ui->btnPlBottom->setEnabled(false);
-            ui->btnPlDown->setEnabled(false);
-            ui->btnPlTop->setEnabled(false);
-            ui->btnPlUp->setEnabled(false);
-        } else if (ui->tableViewBmPlaylist->selectionModel()->selectedRows().size() == 1) {
-            ui->btnPlBottom->setEnabled(true);
-            ui->btnPlDown->setEnabled(true);
-            ui->btnPlTop->setEnabled(true);
-            ui->btnPlUp->setEnabled(true);
-        } else {
-            ui->btnPlBottom->setEnabled(true);
-            ui->btnPlDown->setEnabled(false);
-            ui->btnPlTop->setEnabled(true);
-            ui->btnPlUp->setEnabled(false);
-        }
-    });
 
     connect(ui->tableViewRotation->selectionModel(), &QItemSelectionModel::selectionChanged, [&]() {
         if (ui->tableViewRotation->selectionModel()->selectedRows().empty()) {
@@ -594,23 +499,6 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     });
 
-    connect(&playlistSongsModel, &TableModelPlaylistSongs::bmPlSongsMoved,
-            [&](auto startRow, auto startCol, auto endRow, auto endCol) {
-                auto topLeft = ui->tableViewBmPlaylist->model()->index(startRow, startCol);
-                auto bottomRight = ui->tableViewBmPlaylist->model()->index(endRow, endCol);
-                ui->tableViewBmPlaylist->clearSelection();
-                ui->tableViewBmPlaylist->selectionModel()->select(QItemSelection(topLeft, bottomRight),
-                                                                  QItemSelectionModel::Select);
-                auto nextPlSong = playlistSongsModel.getNextPlSong();
-                if (nextPlSong.has_value() && !ui->checkBoxBmBreak->isChecked()) {
-                    ui->labelBmNext->setText(nextPlSong->get().artist + " - " + nextPlSong->get().title);
-                } else {
-                    ui->labelBmNext->setText("Breaking after current song");
-                }
-
-            });
-    connect(&playlistSongsModel, &TableModelPlaylistSongs::playingPlSongIdChanged, &bmPlDelegate,
-            &ItemDelegatePlaylistSongs::setPlayingPlSongId);
     connect(&qModel, &TableModelQueueSongs::qSongsMoved, [&](auto startRow, auto startCol, auto endRow, auto endCol) {
         auto topLeft = ui->tableViewQueue->model()->index(startRow, startCol);
         auto bottomRight = ui->tableViewQueue->model()->index(endRow, endCol);
@@ -630,28 +518,9 @@ MainWindow::MainWindow(QWidget *parent) :
                                                         QItemSelectionModel::Select);
     });
     std::vector<QWidget *> videoWidgets{cdgWindow->getVideoDisplay(), ui->videoPreview};
-    bmMediaBackend.setVideoOutputWidgets({cdgWindow->getVideoDisplayBm(), ui->videoPreviewBm});
     kMediaBackend.setVideoOutputWidgets(videoWidgets);
     settings.setStartupOk(true);
     m_initialUiSetupDone = true;
-    bmMediaBackend.stop(true);
-    if ((settings.bmAutoStart()) && (playlistSongsModel.rowCount() > 0)) {
-        QTimer::singleShot(1000, [&]() {
-            playlistSongsModel.setCurrentPosition(0);
-            auto plSong = playlistSongsModel.getCurrentSong();
-            if (plSong.has_value()) {
-                if (QFile::exists(plSong->get().path)) {
-                    bmMediaBackend.setMedia(plSong->get().path);
-                    bmMediaBackend.play();
-                    bmMediaBackend.setVolume(ui->sliderBmVolume->value());
-                } else {
-                    QMessageBox::warning(this, tr("Break music autostart failure"),
-                                         tr("Break music is set to autostart but the first song in the current playlist was not found.\n\nAborting playback."),
-                                         QMessageBox::Ok);
-                }
-            }
-        });
-    }
 
 }
 
@@ -704,8 +573,6 @@ void MainWindow::play(const QString &karaokeFilePath, const bool &k2k) {
                     qInfo() << "Extracted audio file size: " << QFileInfo(audioFile).size();
                     qInfo() << "Setting karaoke backend source file to: " << audioFile;
                     kMediaBackend.setMediaCdg(cdgFile, audioFile);
-                    if (!k2k)
-                        bmMediaBackend.fadeOut(!settings.bmKCrossFade());
                     qInfo() << "Beginning playback of file: " << audioFile;
                     QApplication::setOverrideCursor(Qt::WaitCursor);
                     kMediaBackend.play();
@@ -747,8 +614,6 @@ void MainWindow::play(const QString &karaokeFilePath, const bool &k2k) {
             QFile::copy(audiofn, khTmpDir->path() + QDir::separator() + audTmpFile);
             kMediaBackend.setMediaCdg(khTmpDir->path() + QDir::separator() + cdgTmpFile,
                                       khTmpDir->path() + QDir::separator() + audTmpFile);
-            if (!k2k)
-                bmMediaBackend.fadeOut(!settings.bmKCrossFade());
             QApplication::setOverrideCursor(Qt::WaitCursor);
             kMediaBackend.play();
             QApplication::restoreOverrideCursor();
@@ -760,22 +625,13 @@ void MainWindow::play(const QString &karaokeFilePath, const bool &k2k) {
             QFile::copy(karaokeFilePath, tmpFileName);
             qInfo() << "Playing temporary copy to avoid bad filename stuff w/ gstreamer: " << tmpFileName;
             kMediaBackend.setMedia(tmpFileName);
-            if (!k2k)
-                bmMediaBackend.fadeOut();
             kMediaBackend.play();
             kMediaBackend.fadeInImmediate();
         }
         kMediaBackend.setTempo(ui->spinBoxTempo->value());
-        if (settings.recordingEnabled()) {
-            qInfo() << "Starting recording";
-            QString timeStamp = QDateTime::currentDateTime().toString("yyyy-MM-dd-hhmm");
-            audioRecorder.record(curSinger + " - " + curArtist + " - " + curTitle + " - " + timeStamp);
-        }
 
 
     } else if (kMediaBackend.state() == MediaBackend::PausedState) {
-        if (settings.recordingEnabled())
-            audioRecorder.unpause();
         kMediaBackend.play();
         kMediaBackend.fadeIn(false);
     }
@@ -791,9 +647,8 @@ MainWindow::~MainWindow() {
     timeEndPeriod(1);
 #endif
     lazyDurationUpdater->stopWork();
-    settings.bmSetVolume(ui->sliderBmVolume->value());
     settings.setAudioVolume(ui->sliderVolume->value());
-    qInfo() << "Saving volumes - K: " << settings.audioVolume() << " BM: " << settings.bmVolume();
+    qInfo() << "Saving volumes - K: " << settings.audioVolume();
     qInfo() << "Saving window and widget sizing and positioning info";
     settings.saveSplitterState(ui->splitter);
     settings.saveSplitterState(ui->splitter_2);
@@ -802,19 +657,12 @@ MainWindow::~MainWindow() {
     settings.saveColumnWidths(ui->tableViewRotation);
     settings.saveColumnWidths(ui->tableViewQueue);
     settings.saveWindowState(requestsDialog);
-    settings.saveWindowState(dlgSongShop);
-    settings.saveWindowState(dlgSongShop);
     settings.saveWindowState(dbDialog);
     settings.saveWindowState(this);
-    settings.saveSplitterState(ui->splitterBm);
-    settings.saveColumnWidths(ui->tableViewBmDb);
-    settings.saveColumnWidths(ui->tableViewBmPlaylist);
-    settings.bmSetPlaylistIndex(ui->comboBoxBmPlaylists->currentIndex());
     settings.sync();
     qInfo() << "Deleting non-owned objects";
     delete ui;
     delete khTmpDir;
-    delete dlgSongShop;
     delete requestsDialog;
     qInfo() << "OpenKJ mainwindow destructor complete";
 }
@@ -871,14 +719,7 @@ void MainWindow::on_buttonStop_clicked() {
     }
     kAASkip = true;
     cdgWindow->showAlert(false);
-    audioRecorder.stop();
-    if (settings.bmKCrossFade()) {
-        bmMediaBackend.fadeIn(false);
-        kMediaBackend.stop();
-    } else {
-        kMediaBackend.stop();
-        bmMediaBackend.fadeIn();
-    }
+    kMediaBackend.stop();
 //    ipcClient->send_MessageToServer(KhIPCClient::CMD_FADE_IN);
 }
 
@@ -966,7 +807,6 @@ void MainWindow::on_tableViewRotation_doubleClicked(const QModelIndex &index) {
                     kAASkip = true;
                     cdgWindow->showAlert(false);
                 }
-                audioRecorder.stop();
                 kMediaBackend.stop(true);
             }
             //           play(nextSongPath);
@@ -1092,7 +932,6 @@ void MainWindow::on_tableViewQueue_doubleClicked(const QModelIndex &index) {
             kAASkip = true;
             cdgWindow->showAlert(false);
         }
-        audioRecorder.stop();
         kMediaBackend.stop(true);
     }
     int curSingerId = qModel.getSingerId();
@@ -1142,16 +981,12 @@ void MainWindow::on_actionImport_Regulars_triggered() {
 }
 
 void MainWindow::on_actionSettings_triggered() {
-    auto settingsDialog = new DlgSettings(&kMediaBackend, &bmMediaBackend, this);
+    auto settingsDialog = new DlgSettings(&kMediaBackend, this);
     settingsDialog->setModal(true);
     connect(settingsDialog, &DlgSettings::audioUseFaderChanged, &kMediaBackend, &MediaBackend::setUseFader);
     connect(settingsDialog, &DlgSettings::audioSilenceDetectChanged, &kMediaBackend,
             &MediaBackend::setUseSilenceDetection);
-    connect(settingsDialog, &DlgSettings::audioUseFaderChangedBm, &bmMediaBackend, &MediaBackend::setUseFader);
-    connect(settingsDialog, &DlgSettings::audioSilenceDetectChangedBm, &bmMediaBackend,
-            &MediaBackend::setUseSilenceDetection);
     connect(settingsDialog, &DlgSettings::audioDownmixChanged, &kMediaBackend, &MediaBackend::setDownmix);
-    connect(settingsDialog, &DlgSettings::audioDownmixChangedBm, &bmMediaBackend, &MediaBackend::setDownmix);
     settingsDialog->show();
 }
 
@@ -1284,8 +1119,6 @@ void MainWindow::karaokeMediaBackend_stateChanged(const MediaBackend::State &sta
             return;
         }
         qInfo() << "KAudio entered StoppedState";
-        //bmMediaBackend.setVideoEnabled(true);
-        audioRecorder.stop();
         if (k2kTransition)
             return;
         ui->labelArtist->setText("None");
@@ -1304,7 +1137,6 @@ void MainWindow::karaokeMediaBackend_stateChanged(const MediaBackend::State &sta
         if (state == m_lastAudioState)
             return;
         m_lastAudioState = state;
-        bmMediaBackend.fadeIn(false);
         if (settings.karaokeAutoAdvance()) {
             qInfo() << " - Karaoke Autoplay is enabled";
             if (kAASkip) {
@@ -1362,20 +1194,15 @@ void MainWindow::karaokeMediaBackend_stateChanged(const MediaBackend::State &sta
     }
     if (state == MediaBackend::EndOfMediaState) {
         qInfo() << "KAudio entered EndOfMediaState";
-        audioRecorder.stop();
 //        ipcClient->send_MessageToServer(KhIPCClient::CMD_FADE_IN);
-        //bmMediaBackend.setVideoEnabled(true);
         kMediaBackend.stop(true);
-        bmMediaBackend.fadeIn(false);
     }
     if (state == MediaBackend::PausedState) {
         qInfo() << "KAudio entered PausedState";
-        audioRecorder.pause();
     }
     if (state == MediaBackend::PlayingState) {
         qInfo() << "KAudio entered PlayingState";
         m_lastAudioState = state;
-        //bmMediaBackend.setVideoEnabled(false);
         ui->pushButtonKeyUp->setEnabled(true);
         ui->pushButtonKeyDn->setEnabled(true);
         ui->pushButtonTempoDn->setEnabled(true);
@@ -1406,22 +1233,11 @@ void MainWindow::sfxAudioBackend_stateChanged(const MediaBackend::State &state) 
 
 void MainWindow::hasActiveVideoChanged() {
     ui->videoPreview->setHasActiveVideo(m_kHasActiveVideo);
-    ui->videoPreviewBm->setHasActiveVideo(m_bmHasActiveVideo);
     cdgWindow->getVideoDisplay()->setHasActiveVideo(m_kHasActiveVideo);
-    cdgWindow->getVideoDisplayBm()->setHasActiveVideo(m_bmHasActiveVideo);
     if (m_timerKaraokeAA.isActive() && settings.karaokeAAAlertEnabled())
         return;
-    if (m_bmHasActiveVideo && !m_kHasActiveVideo) {
-        cdgWindow->getVideoDisplay()->hide();
-        cdgWindow->getVideoDisplayBm()->show();
-        ui->videoPreview->hide();
-        ui->videoPreviewBm->show();
-    } else {
-        cdgWindow->getVideoDisplay()->show();
-        cdgWindow->getVideoDisplayBm()->hide();
-        ui->videoPreview->show();
-        ui->videoPreviewBm->hide();
-    }
+    cdgWindow->getVideoDisplay()->show();
+    ui->videoPreview->show();
 }
 
 void MainWindow::on_buttonRegulars_clicked() {
@@ -1521,15 +1337,8 @@ void MainWindow::silenceDetectedKar() {
     if (settings.karaokeAutoAdvance())
         kAASkip = false;
 //        ipcClient->send_MessageToServer(KhIPCClient::CMD_FADE_IN);
-    bmMediaBackend.fadeIn();
 }
 
-void MainWindow::silenceDetectedBm() {
-    if (bmMediaBackend.position() > 10000 && bmMediaBackend.position() < (bmMediaBackend.duration() - 3)) {
-        qInfo() << "Break music silence detected, reporting EndOfMediaState to trigger playlist advance";
-        bmMediaStateChanged(MediaBackend::EndOfMediaState);
-    }
-}
 
 void MainWindow::on_tableViewDB_customContextMenuRequested(const QPoint &pos) {
     QModelIndex index = ui->tableViewDB->indexAt(pos);
@@ -1584,11 +1393,6 @@ void MainWindow::renameSinger() {
     }
 }
 
-void MainWindow::on_tableViewBmPlaylist_customContextMenuRequested([[maybe_unused]]const QPoint &pos) {
-    QMenu contextMenu(this);
-    contextMenu.addAction("Delete", m_shortcutManager->deletePlSongShortcut(), &QShortcut::activated);
-    contextMenu.exec(QCursor::pos());
-}
 
 void MainWindow::on_tableViewQueue_customContextMenuRequested(const QPoint &pos) {
     int selCount = ui->tableViewQueue->selectionModel()->selectedRows().size();
@@ -2075,212 +1879,23 @@ void MainWindow::timerButtonFlashTimeout() {
     }
 }
 
-void MainWindow::bmAddPlaylist(const QString &title) {
-    if (bmPlaylistsModel->insertRow(bmPlaylistsModel->rowCount())) {
-        QModelIndex index = bmPlaylistsModel->index(bmPlaylistsModel->rowCount() - 1, 1);
-        bmPlaylistsModel->setData(index, title);
-        bmPlaylistsModel->submitAll();
-        bmPlaylistsModel->select();
-        ui->comboBoxBmPlaylists->setCurrentIndex(index.row());
-    }
-}
 
-void MainWindow::bmDbUpdated() {
-    bmDbModel.loadDatabase();
-    ui->comboBoxBmPlaylists->setCurrentIndex(0);
-}
 
-void MainWindow::bmDbCleared() {
-    qInfo() << "bmDbCleared fired";
-    bmDbModel.loadDatabase();
-    bmAddPlaylist("Default");
-    ui->comboBoxBmPlaylists->setCurrentIndex(0);
-}
 
-void MainWindow::on_actionManage_Break_DB_triggered() {
-    bmDbDialog->show();
-}
 
-void MainWindow::bmMediaStateChanged(const MediaBackend::State &newState) {
-    static MediaBackend::State lastState = MediaBackend::StoppedState;
-    if (newState == lastState)
-        return;
-    lastState = newState;
-    switch (newState) {
-        case MediaBackend::StoppedState:
-            resetBmLabels();
-            break;
-        case MediaBackend::EndOfMediaState: {
-            if (ui->checkBoxBmBreak->isChecked()) {
-                ui->checkBoxBmBreak->setChecked(false);
-                bmMediaBackend.stop(true);
-                resetBmLabels();
-                return;
-            }
-            auto plSong = playlistSongsModel.getNextPlSong();
-            if (plSong.has_value()) {
-                bmMediaBackend.setMedia(plSong->get().path);
-                playlistSongsModel.setCurrentPosition(plSong->get().position);
-                qInfo() << "Break music auto-advancing to song: " << plSong->get().path;
-                bmMediaBackend.stop(true);
-                bmMediaBackend.play();
-                if (kMediaBackend.state() == MediaBackend::PlayingState)
-                    bmMediaBackend.fadeOutImmediate();
-            } else {
-                bmMediaBackend.stop(true);
-                resetBmLabels();
-            }
-            break;
-        }
-        case MediaBackend::PlayingState: {
-            auto plSong = playlistSongsModel.getCurrentSong();
-            if (plSong.has_value())
-                ui->labelBmPlaying->setText(plSong->get().artist + " - " + plSong->get().title);
-            auto plNextSong = playlistSongsModel.getNextPlSong();
-            if (!ui->checkBoxBmBreak->isChecked() && plNextSong.has_value())
-                ui->labelBmNext->setText(plNextSong->get().artist + " - " + plNextSong->get().title);
-            else
-                ui->labelBmNext->setText("None - Breaking after current song");
-            break;
-        }
-        case MediaBackend::PausedState:
-            break;
-        case MediaBackend::UnknownState:
-            resetBmLabels();
-            break;
-    }
-}
 
-void MainWindow::bmMediaPositionChanged(const qint64 &position) {
-    if (!sliderBmPositionPressed) {
-        ui->sliderBmPosition->setValue(position);
-    }
-    ui->labelBmPosition->setText(QTime(0, 0, 0, 0).addMSecs(position).toString("m:ss"));
-    ui->labelBmRemaining->setText(QTime(0, 0, 0, 0).addMSecs(bmMediaBackend.duration() - position).toString("m:ss"));
-}
 
-void MainWindow::bmMediaDurationChanged(const qint64 &duration) {
-    ui->sliderBmPosition->setMaximum(duration);
-    ui->labelBmDuration->setText(QTime(0, 0, 0, 0).addMSecs(duration).toString("m:ss"));
-}
 
-void MainWindow::on_tableViewBmPlaylist_clicked(const QModelIndex &index) {
-    qInfo() << "DNDDEBUG - acceptDrops(): " << ui->tableViewBmPlaylist->acceptDrops();
-    qInfo() << "DNDDEBUG - testAttribute(Qt::WA_AcceptDrops): "
-            << ui->tableViewBmPlaylist->testAttribute(Qt::WA_AcceptDrops);
-    qInfo() << "DNDDEBUG - hasMouseTracking(): " << ui->tableViewBmPlaylist->hasMouseTracking();
-    qInfo() << "DNDDEBUG - mainwindow hasMouseTracking(): " << hasMouseTracking();
-    qInfo() << "DNDDEBUG - supportedDropActions(): " << playlistSongsModel.supportedDropActions();
 
-    if (index.column() == TableModelPlaylistSongs::COL_PATH) {
-        if (playlistSongsModel.isCurrentlyPlayingSong(index.data(Qt::UserRole).toInt())) {
-            if (bmMediaBackend.state() == MediaBackend::PlayingState ||
-                bmMediaBackend.state() == MediaBackend::PausedState) {
-                QMessageBox msgBox;
-                msgBox.setWindowTitle("Unable to remove");
-                msgBox.setText(
-                        "The playlist song you are trying to remove is currently playing and can not be removed.");
-                msgBox.exec();
-                return;
-            }
-            playlistSongsModel.setCurrentPosition(-1);
-            resetBmLabels();
-        }
-        playlistSongsModel.deleteSong(index.row());
-        playlistSongsModel.savePlaylistChanges();
-        if (playlistSongsModel.currentPosition() > index.row()) {
-            playlistSongsModel.setCurrentPosition(playlistSongsModel.currentPosition() - 1);
-        }
-        if (ui->checkBoxBmBreak->isChecked()) {
-            ui->labelBmNext->setText("None - Breaking after current song");
-            return;
-        }
-        auto nextSong = playlistSongsModel.getNextPlSong();
-        if (nextSong.has_value())
-            ui->labelBmNext->setText(nextSong->get().artist + " - " + nextSong->get().title);
-        else
-            ui->labelBmNext->setText("None - Breaking after current song");
-    }
-}
 
-void MainWindow::on_comboBoxBmPlaylists_currentIndexChanged(const int &index) {
-    bmCurrentPlaylist = bmPlaylistsModel->index(index, 0).data().toInt();
-    playlistSongsModel.setCurrentPlaylist(bmCurrentPlaylist);
-    auto nextPlSong = playlistSongsModel.getNextPlSong();
-    if (nextPlSong.has_value())
-        ui->labelBmNext->setText(nextPlSong->get().artist + " - " + nextPlSong->get().title);
-    else
-        ui->labelBmNext->setText("None - Breaking after current song");
-    ui->tableViewBmPlaylist->clearSelection();
-}
 
-void MainWindow::on_checkBoxBmBreak_toggled(const bool &checked) {
-    if (!checked) {
-        auto nextSong = playlistSongsModel.getNextPlSong();
-        if (nextSong.has_value())
-            ui->labelBmNext->setText(nextSong->get().artist + " - " + nextSong->get().title);
-        return;
-    }
-    ui->labelBmNext->setText("None - Stopping after current song");
-}
 
-void MainWindow::on_tableViewBmDb_doubleClicked(const QModelIndex &index) {
-    int songId = index.sibling(index.row(), 0).data().toInt();
-    playlistSongsModel.addSong(songId);
-    playlistSongsModel.savePlaylistChanges();
-}
 
-void MainWindow::on_buttonBmStop_clicked() {
-    bmMediaBackend.stop(false);
-}
 
-void MainWindow::on_lineEditBmSearch_returnPressed() {
-    bmDbModel.search(ui->lineEditBmSearch->text());
-}
 
-void MainWindow::on_tableViewBmPlaylist_doubleClicked(const QModelIndex &index) {
-    if (bmMediaBackend.state() == MediaBackend::PlayingState || bmMediaBackend.state() == MediaBackend::PausedState)
-        bmMediaBackend.stop(false);
-    playlistSongsModel.setCurrentPosition(index.row());
-    auto plSong = playlistSongsModel.getCurrentSong();
-    if (!plSong.has_value())
-        return;
-    bmMediaBackend.setMedia(plSong->get().path);
-    bmMediaBackend.play();
-    if (kMediaBackend.state() != MediaBackend::PlayingState)
-        bmMediaBackend.fadeInImmediate();
-}
 
-void MainWindow::on_buttonBmPause_clicked(const bool &checked) {
-    if (checked)
-        bmMediaBackend.pause();
-    else
-        bmMediaBackend.play();
-}
 
-bool MainWindow::bmPlaylistExists(const QString &name) {
-    for (int i = 0; i < bmPlaylistsModel->rowCount(); i++) {
-        if (bmPlaylistsModel->index(i, 1).data().toString().toLower() == name.toLower())
-            return true;
-    }
-    return false;
-}
 
-void MainWindow::on_actionDisplay_Metadata_toggled(const bool &arg1) {
-    ui->tableViewBmDb->setColumnHidden(TableModelBreakSongs::COL_ARTIST, !arg1);
-    ui->tableViewBmDb->setColumnHidden(TableModelBreakSongs::COL_TITLE, !arg1);
-    ui->tableViewBmPlaylist->setColumnHidden(TableModelPlaylistSongs::COL_ARTIST, !arg1);
-    ui->tableViewBmPlaylist->setColumnHidden(TableModelPlaylistSongs::COL_TITLE, !arg1);
-    settings.bmSetShowMetadata(arg1);
-    autosizeBmViews();
-}
-
-void MainWindow::on_actionDisplay_Filenames_toggled(const bool &arg1) {
-    ui->tableViewBmDb->setColumnHidden(TableModelBreakSongs::COL_FILENAME, !arg1);
-    ui->tableViewBmPlaylist->setColumnHidden(TableModelPlaylistSongs::COL_FILENAME, !arg1);
-    settings.bmSetShowFilenames(arg1);
-    autosizeBmViews();
-}
 
 void MainWindow::on_actionShow_Debug_Log_toggled(const bool &arg1) {
     debugDialog->setVisible(arg1);
@@ -2291,160 +1906,10 @@ void MainWindow::on_actionManage_Karaoke_DB_triggered() {
     dbDialog->showNormal();
 }
 
-void MainWindow::on_actionPlaylistNew_triggered() {
-    bool ok;
-    QString title = QInputDialog::getText(this, tr("New Playlist"), tr("Playlist title:"), QLineEdit::Normal,
-                                          tr("New Playlist"), &ok);
-    if (ok && !title.isEmpty()) {
-        bmAddPlaylist(title);
-    }
-}
 
-void MainWindow::on_actionPlaylistImport_triggered() {
-    QString importFile = QFileDialog::getOpenFileName(this, tr("Select playlist to import"),
-                                                      QStandardPaths::writableLocation(
-                                                              QStandardPaths::DocumentsLocation),
-                                                      tr("m3u playlist(*.m3u)"), nullptr, QFileDialog::DontUseNativeDialog);
-    if (importFile != "") {
-        QFileInfo fi(importFile);
-        QString importPath = fi.absoluteDir().path();
-        QStringList files;
-        QFile textFile;
-        textFile.setFileName(importFile);
-        (void)textFile.open(QFile::ReadOnly);
-        QTextStream textStream(&textFile);
-        while (true) {
-            QString line = textStream.readLine();
-            if (line.isNull())
-                break;
-            else {
-                if (!line.startsWith("#"))
-                    files.append(line.replace("\\", "/"));
-            }
-        }
-        bool ok;
-        QString plTitle = QInputDialog::getText(this, tr("New Playlist"), tr("Playlist title:"), QLineEdit::Normal,
-                                                tr("New Playlist"), &ok);
 
-        if (ok && !plTitle.isEmpty()) {
-            if (!bmPlaylistExists(plTitle)) {
-                if (bmPlaylistsModel->insertRow(bmPlaylistsModel->rowCount())) {
-                    QModelIndex index = bmPlaylistsModel->index(bmPlaylistsModel->rowCount() - 1, 1);
-                    bmPlaylistsModel->setData(index, plTitle);
-                    bmPlaylistsModel->submitAll();
-                    bmPlaylistsModel->select();
-                    ui->comboBoxBmPlaylists->setCurrentIndex(index.row());
-                    playlistSongsModel.setCurrentPlaylist(bmPlaylistsModel->index(index.row(), 0).data().toInt());
 
-                }
-            }
-        }
-        QSqlQuery query;
-        query.exec("BEGIN TRANSACTION");
-        TagReader reader;
-        for (int i = 0; i < files.size(); i++) {
-            if (QFile(files.at(i)).exists()) {
-                reader.setMedia(files.at(i).toLocal8Bit());
-                QString duration = QString::number(reader.getDuration() / 1000);
-                QString artist = reader.getArtist();
-                QString title = reader.getTitle();
-                QString filename = QFileInfo(files.at(i)).fileName();
-                QString queryString =
-                        "INSERT OR IGNORE INTO bmsongs (artist,title,path,filename,duration,searchstring) VALUES(\"" +
-                        artist + "\",\"" + title + "\",\"" + files.at(i) + "\",\"" + filename + "\",\"" + duration +
-                        "\",\"" + artist + title + filename + "\")";
-                query.exec(queryString);
-            } else if (QFile(importPath + "/" + files.at(i)).exists()) {
-                reader.setMedia(importPath + "/" + files.at(i).toLocal8Bit());
-                QString duration = QString::number(reader.getDuration() / 1000);
-                QString artist = reader.getArtist();
-                QString title = reader.getTitle();
-                QString filename = QFileInfo(files.at(i)).fileName();
-                QString path = importPath + "/" + files.at(i);
-                QString searchstring = artist + " " + title + " " + filename;
-                QString queryString = "INSERT OR IGNORE INTO bmsongs (artist,title,path,filename,duration,searchstring) VALUES(:artist,:title,:path,:filename,:duration,:searchstring)";
-                query.prepare(queryString);
-                query.bindValue(":artist", artist);
-                query.bindValue(":title", title);
-                query.bindValue(":path", path);
-                query.bindValue(":filename", filename);
-                query.bindValue(":duration", duration);
-                query.bindValue(":searchstring", searchstring);
-                query.exec();
-            }
-        }
-        query.exec("COMMIT TRANSACTION");
-        //bmDbModel->select();
-        bmDbModel.loadDatabase();
-        QApplication::processEvents();
-        QList<int> songIds;
-        for (int i = 0; i < files.size(); i++) {
-            int songId = bmDbModel.getSongId(files.at(i));
-            if (songId >= 0) {
-                songIds.push_back(songId);
-            } else {
-                songId = bmDbModel.getSongId(importPath + "/" + files.at(i));
-                if (songId >= 0) {
-                    songIds.push_back(songId);
-                }
-            }
-        }
-        qInfo() << songIds;
-        playlistSongsModel.setCurrentPlaylist(bmCurrentPlaylist);
-        std::for_each(songIds.begin(), songIds.end(), [&](int songId) {
-            playlistSongsModel.addSong(songId);
-        });
-        playlistSongsModel.savePlaylistChanges();
-    }
-}
 
-void MainWindow::on_actionPlaylistExport_triggered() {
-    QString defaultFilePath = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() +
-                              ui->comboBoxBmPlaylists->currentText() + ".m3u";
-    qDebug() << "Default save location: " << defaultFilePath;
-    QString saveFilePath = QFileDialog::getSaveFileName(this, tr("Select filename to save playlist as"),
-                                                        defaultFilePath, tr("m3u playlist(*.m3u)"), nullptr, QFileDialog::DontUseNativeDialog);
-    if (saveFilePath != "") {
-        QFile file(saveFilePath);
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-            QMessageBox::warning(this, tr("Error saving file"),
-                                 tr("Unable to open selected file for writing.  Please verify that you have the proper permissions to write to that location."),
-                                 QMessageBox::Close);
-            return;
-        }
-        QTextStream out(&file);
-        for (int i = 0; i < playlistSongsModel.rowCount(); i++) {
-            out << playlistSongsModel.index(i, TableModelPlaylistSongs::COL_PATH).data().toString() << "\n";
-        }
-    }
-}
-
-void MainWindow::on_actionPlaylistDelete_triggered() {
-    QMessageBox msgBox;
-    msgBox.setText("Are you sure?");
-    msgBox.setInformativeText(
-            "Are you sure you want to delete the current playlist?  If you have not exported it, you will not be able to undo this action!");
-    msgBox.setIcon(QMessageBox::Warning);
-    msgBox.addButton(QMessageBox::Cancel);
-    QPushButton *yesButton = msgBox.addButton(QMessageBox::Yes);
-    msgBox.exec();
-    if (msgBox.clickedButton() == yesButton) {
-        QSqlQuery query;
-        query.exec("DELETE FROM bmplsongs WHERE playlist == " + QString::number(playlistSongsModel.currentPlaylist()));
-        query.exec(
-                "DELETE FROM bmplaylists WHERE playlistid == " + QString::number(playlistSongsModel.currentPlaylist()));
-        bmPlaylistsModel->select();
-        if (bmPlaylistsModel->rowCount() == 0) {
-            bmAddPlaylist("Default");
-        }
-        ui->comboBoxBmPlaylists->setCurrentIndex(0);
-        playlistSongsModel.setCurrentPlaylist(bmPlaylistsModel->index(0, 0).data().toInt());
-    }
-}
-
-void MainWindow::on_buttonBmSearch_clicked() {
-    bmDbModel.search(ui->lineEditBmSearch->text());
-}
 
 void MainWindow::on_actionAbout_triggered() {
     QString title;
@@ -2550,7 +2015,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
         settings.saveWindowState(cdgWindow);
     settings.setShowCdgWindow(cdgWindow->isVisible());
     cdgWindow->setVisible(false);
-    dlgSongShop->setVisible(false);
     requestsDialog->setVisible(false);
     event->accept();
 }
@@ -2560,11 +2024,6 @@ void MainWindow::on_sliderVolume_valueChanged(int value) {
     kMediaBackend.fadeInImmediate();
 }
 
-void MainWindow::on_sliderBmVolume_valueChanged(int value) {
-    bmMediaBackend.setVolume(value);
-    if (kMediaBackend.state() != MediaBackend::PlayingState)
-        bmMediaBackend.fadeInImmediate();
-}
 
 void MainWindow::songDropNoSingerSel() {
     QMessageBox msgBox;
@@ -2597,10 +2056,6 @@ void MainWindow::on_pushButtonIncomingRequests_clicked() {
     requestsDialog->show();
 }
 
-void MainWindow::on_pushButtonShop_clicked() {
-    dlgSongShop->show();
-    dlgSongShop->setModal(false);
-}
 
 void MainWindow::filesDroppedOnQueue(const QList<QUrl> &urls, const int &singerId, const int &position) {
             foreach (QUrl url, urls) {
@@ -2709,20 +2164,11 @@ void MainWindow::appFontChanged(const QFont &font) {
 //    ui->buttonStop->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
 //    ui->buttonPause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
 
-    ui->buttonBmStop->resize(mcbSize);
-    ui->buttonBmPause->resize(mcbSize);
-    ui->buttonBmStop->setIconSize(mcbSize);
-    ui->buttonBmPause->setIconSize(mcbSize);
-    ui->buttonBmStop->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
-    ui->buttonBmPause->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
 
 //    ui->pushButton->resize(mcbSize);
 //    ui->pushButton->setIcon(QIcon(QPixmap(":/Icons/system-search2.png").scaled(mcbSize)));
 //    ui->pushButton->setIconSize(mcbSize);
 
-//    ui->buttonBmSearch->resize(mcbSize);
-//    ui->buttonBmSearch->setIcon(QIcon(QPixmap(":/Icons/system-search2.png").scaled(mcbSize)));
-//    ui->buttonBmSearch->setIconSize(mcbSize);
 
 //    ui->buttonAddSinger->resize(mcbSize);
 //    ui->buttonAddSinger->setIcon(QIcon(QPixmap(":/Icons/breeze-dark/list-add-user.svg").scaled(mcbSize)));
@@ -2832,123 +2278,32 @@ void MainWindow::autosizeQueue() {
     ui->tabWidgetQueue->setCurrentIndex(curTab);
 }
 
-void MainWindow::autosizeBmViews() {
-
-    int fH = QFontMetrics(settings.applicationFont()).height();
-    int iconWidth = fH + fH;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 11, 0))
-    int durationColSize = QFontMetrics(settings.applicationFont()).horizontalAdvance("Duration") + fH;
-#else
-    int durationColSize = QFontMetrics(settings.applicationFont()).width("Duration") + fH;
-#endif
-    // 4 = filename 1 = metadata artist 2 = medatada title
-
-    int artistColSize = 0;
-    int titleColSize = 0;
-    int fnameColSize = 0;
-    int remainingSpace = ui->tableViewBmDb->width() - durationColSize - 15;
-    if (settings.bmShowMetadata() && settings.bmShowFilenames()) {
-        artistColSize = (float) remainingSpace * .25;
-        titleColSize = (float) remainingSpace * .25;
-        fnameColSize = (float) remainingSpace * .5;
-    } else if (settings.bmShowMetadata()) {
-        artistColSize = remainingSpace * .5;
-        titleColSize = remainingSpace * .5;
-    } else if (settings.bmShowFilenames()) {
-        fnameColSize = remainingSpace;
-    }
-    ui->tableViewBmDb->horizontalHeader()->resizeSection(TableModelBreakSongs::COL_ARTIST, artistColSize);
-    ui->tableViewBmDb->horizontalHeader()->resizeSection(TableModelBreakSongs::COL_TITLE, titleColSize);
-    ui->tableViewBmDb->horizontalHeader()->resizeSection(TableModelBreakSongs::COL_FILENAME, fnameColSize);
-    ui->tableViewBmDb->horizontalHeader()->setSectionResizeMode(TableModelBreakSongs::COL_DURATION, QHeaderView::Fixed);
-    ui->tableViewBmDb->horizontalHeader()->resizeSection(TableModelBreakSongs::COL_DURATION, durationColSize);
-
-
-    remainingSpace = ui->tableViewBmPlaylist->width() - durationColSize - (iconWidth * 2) - 15;
-    //5=filename  6=Duration 3=artist 4=title
-    if (settings.bmShowMetadata() && settings.bmShowFilenames()) {
-        artistColSize = (float) remainingSpace * .25;
-        titleColSize = (float) remainingSpace * .25;
-        fnameColSize = (float) remainingSpace * .5;
-    } else if (settings.bmShowMetadata()) {
-        artistColSize = remainingSpace * .5;
-        titleColSize = remainingSpace * .5;
-    } else if (settings.bmShowFilenames()) {
-        fnameColSize = remainingSpace;
-    }
-    ui->tableViewBmPlaylist->horizontalHeader()->resizeSection(TableModelPlaylistSongs::COL_ARTIST, artistColSize);
-    ui->tableViewBmPlaylist->horizontalHeader()->resizeSection(TableModelPlaylistSongs::COL_TITLE, titleColSize);
-    ui->tableViewBmPlaylist->horizontalHeader()->resizeSection(TableModelPlaylistSongs::COL_FILENAME, fnameColSize);
-    ui->tableViewBmPlaylist->horizontalHeader()->resizeSection(TableModelPlaylistSongs::COL_DURATION, durationColSize);
-    ui->tableViewBmPlaylist->horizontalHeader()->setSectionResizeMode(TableModelPlaylistSongs::COL_ID,
-                                                                      QHeaderView::Fixed);
-    ui->tableViewBmPlaylist->horizontalHeader()->resizeSection(TableModelPlaylistSongs::COL_ID, iconWidth);
-    ui->tableViewBmPlaylist->horizontalHeader()->setSectionResizeMode(TableModelPlaylistSongs::COL_PATH,
-                                                                      QHeaderView::Fixed);
-    ui->tableViewBmPlaylist->horizontalHeader()->resizeSection(TableModelPlaylistSongs::COL_PATH, iconWidth);
-}
 
 void MainWindow::resizeEvent(QResizeEvent *event) {
     if (!m_initialUiSetupDone)
         return;
     QMainWindow::resizeEvent(event);
     autosizeViews();
-    autosizeBmViews();
     if (ui->tabWidget->currentIndex() == 0) {
         autosizeViews();
-        bNeedAutoSize = true;
         kNeedAutoSize = false;
     }
     if (ui->tabWidget->currentIndex() == 1) {
-        autosizeBmViews();
-        bNeedAutoSize = false;
         kNeedAutoSize = true;
     }
     settings.saveWindowState(this);
 }
 
 void MainWindow::on_tabWidget_currentChanged(const int &index) {
-    if (bNeedAutoSize && index == 1) {
-        autosizeBmViews();
-        bNeedAutoSize = false;
-    }
     if (kNeedAutoSize && index == 0) {
         autosizeViews();
         kNeedAutoSize = false;
     }
 }
 
-void MainWindow::bmDatabaseAboutToUpdate() {
-    bmPlaylistsModel->revertAll();
-    bmPlaylistsModel->setTable("");
-}
 
-void MainWindow::bmSongMoved(const int &oldPos, const int &newPos) {
-    int curPlPos = playlistSongsModel.currentPosition();
-    if (oldPos < curPlPos && newPos >= curPlPos)
-        curPlPos--;
-    else if (oldPos > curPlPos && newPos <= curPlPos)
-        curPlPos++;
-    else if (oldPos == curPlPos)
-        curPlPos = newPos;
-    playlistSongsModel.setCurrentPosition(curPlPos);
-    auto nextPlSong = playlistSongsModel.getNextPlSong();
-    if (!ui->checkBoxBmBreak->isChecked() && nextPlSong.has_value()) {
-        ui->labelBmNext->setText(nextPlSong->get().artist + " - " + nextPlSong->get().title);
-    } else
-        ui->labelBmNext->setText("None - Breaking after current song");
-}
 
-void MainWindow::on_sliderBmPosition_sliderPressed() {
-    qInfo() << "BM slider down";
-    sliderBmPositionPressed = true;
-}
 
-void MainWindow::on_sliderBmPosition_sliderReleased() {
-    bmMediaBackend.setPosition(ui->sliderBmPosition->value());
-    sliderBmPositionPressed = false;
-    qInfo() << "BM slider up.  Position:" << ui->sliderBmPosition->value();
-}
 
 void MainWindow::sfxButtonPressed() {
     auto *btn = (SoundFxButton *) sender();
@@ -3063,15 +2418,6 @@ void MainWindow::rotationSelectionChanged(const QItemSelection &sel, const QItem
 
 }
 
-void MainWindow::on_lineEditBmSearch_textChanged(const QString &arg1) {
-    if (!settings.progressiveSearchEnabled())
-        return;
-    static QString lastVal;
-    if (arg1.trimmed() != lastVal) {
-        bmDbModel.search(arg1);
-        lastVal = arg1.trimmed();
-    }
-}
 
 void MainWindow::on_btnRotTop_clicked() {
     auto indexes = ui->tableViewRotation->selectionModel()->selectedRows();
@@ -3179,67 +2525,10 @@ void MainWindow::on_btnQBottom_clicked() {
     rotationDataChanged();
 }
 
-void MainWindow::on_btnBmPlRandomize_clicked() {
-    if (playlistSongsModel.rowCount() < 2)
-        return;
-    playlistSongsModel.randomizePlaylist();
-}
 
-void MainWindow::on_btnPlTop_clicked() {
-    auto indexes = ui->tableViewBmPlaylist->selectionModel()->selectedRows();
-    std::vector<int> plSongIds;
-    std::for_each(indexes.begin(), indexes.end(), [&](QModelIndex index) {
-        plSongIds.emplace_back(index.data().toInt());
-    });
-    std::for_each(plSongIds.rbegin(), plSongIds.rend(), [&](auto plSongId) {
-        playlistSongsModel.moveSong(playlistSongsModel.getSongPositionById(plSongId), 0);
-    });
-    playlistSongsModel.savePlaylistChanges();
-    auto topLeft = ui->tableViewBmPlaylist->model()->index(0, 0);
-    auto bottomRight = ui->tableViewBmPlaylist->model()->index(plSongIds.size() - 1, 7);
-    ui->tableViewBmPlaylist->selectionModel()->select(QItemSelection(topLeft, bottomRight),
-                                                      QItemSelectionModel::Select);
-}
 
-void MainWindow::on_btnPlUp_clicked() {
-    if (ui->tableViewBmPlaylist->selectionModel()->selectedRows().count() < 1)
-        return;
-    int curPos = ui->tableViewBmPlaylist->selectionModel()->selectedRows().at(0).row();
-    if (curPos == 0)
-        return;
-    playlistSongsModel.moveSong(curPos, curPos - 1);
-    playlistSongsModel.savePlaylistChanges();
-    ui->tableViewBmPlaylist->selectRow(curPos - 1);
-}
 
-void MainWindow::on_btnPlDown_clicked() {
-    int maxpos = ui->tableViewBmPlaylist->model()->rowCount() - 1;
-    if (ui->tableViewBmPlaylist->selectionModel()->selectedRows().count() < 1)
-        return;
-    int curPos = ui->tableViewBmPlaylist->selectionModel()->selectedRows().at(0).row();
-    if (curPos == maxpos)
-        return;
-    playlistSongsModel.moveSong(curPos, curPos + 1);
-    playlistSongsModel.savePlaylistChanges();
-    ui->tableViewBmPlaylist->selectRow(curPos + 1);
-}
 
-void MainWindow::on_btnPlBottom_clicked() {
-    auto indexes = ui->tableViewBmPlaylist->selectionModel()->selectedRows();
-    std::vector<int> plSongIds;
-    std::for_each(indexes.begin(), indexes.end(), [&](QModelIndex index) {
-        plSongIds.emplace_back(index.data().toInt());
-    });
-    std::for_each(plSongIds.begin(), plSongIds.end(), [&](auto plSongId) {
-        playlistSongsModel.moveSong(playlistSongsModel.getSongPositionById(plSongId),
-                                    playlistSongsModel.rowCount() - 1);
-    });
-    playlistSongsModel.savePlaylistChanges();
-    auto topLeft = ui->tableViewBmPlaylist->model()->index(playlistSongsModel.rowCount() - plSongIds.size(), 0);
-    auto bottomRight = ui->tableViewBmPlaylist->model()->index(playlistSongsModel.rowCount() - 1, 7);
-    ui->tableViewBmPlaylist->selectionModel()->select(QItemSelection(topLeft, bottomRight),
-                                                      QItemSelectionModel::Select);
-}
 
 void MainWindow::on_actionSound_Clips_triggered(const bool &checked) {
     if (checked) {
@@ -3263,8 +2552,6 @@ void MainWindow::on_actionNow_Playing_triggered(const bool &checked) {
 void MainWindow::on_actionVideoSmall_triggered() {
     ui->videoPreview->setMinimumSize(QSize(256, 144));
     ui->videoPreview->setMaximumSize(QSize(256, 144));
-    ui->videoPreviewBm->setMinimumSize(QSize(256, 144));
-    ui->videoPreviewBm->setMaximumSize(QSize(256, 144));
     ui->mediaFrame->setMaximumWidth(300);
     ui->mediaFrame->setMinimumWidth(300);
     settings.setMainWindowVideoSize(Settings::Small);
@@ -3274,8 +2561,6 @@ void MainWindow::on_actionVideoSmall_triggered() {
 void MainWindow::on_actionVideoMedium_triggered() {
     ui->videoPreview->setMinimumSize(QSize(384, 216));
     ui->videoPreview->setMaximumSize(QSize(384, 216));
-    ui->videoPreviewBm->setMinimumSize(QSize(384, 216));
-    ui->videoPreviewBm->setMaximumSize(QSize(384, 216));
     ui->mediaFrame->setMaximumWidth(430);
     ui->mediaFrame->setMinimumWidth(430);
     settings.setMainWindowVideoSize(Settings::Medium);
@@ -3285,8 +2570,6 @@ void MainWindow::on_actionVideoMedium_triggered() {
 void MainWindow::on_actionVideoLarge_triggered() {
     ui->videoPreview->setMinimumSize(QSize(512, 288));
     ui->videoPreview->setMaximumSize(QSize(512, 288));
-    ui->videoPreviewBm->setMinimumSize(QSize(512, 288));
-    ui->videoPreviewBm->setMaximumSize(QSize(512, 288));
     ui->mediaFrame->setMaximumWidth(560);
     ui->mediaFrame->setMinimumWidth(560);
     settings.setMainWindowVideoSize(Settings::Large);
@@ -3531,7 +2814,6 @@ void MainWindow::on_actionCDG_Decode_Torture_triggered() {
 void MainWindow::on_actionWrite_Gstreamer_pipeline_dot_files_triggered() {
     QString outputFolder = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation).at(0);
     kMediaBackend.writePipelinesGraphToFile(outputFolder);
-    bmMediaBackend.writePipelinesGraphToFile(outputFolder);
     sfxMediaBackend.writePipelinesGraphToFile(outputFolder);
 }
 
@@ -3592,7 +2874,6 @@ void MainWindow::on_pushButtonHistoryPlay_clicked() {
             kAASkip = true;
             cdgWindow->showAlert(false);
         }
-        audioRecorder.stop();
         kMediaBackend.stop(true);
     }
     int curSingerId = rotModel.getSingerId(historySongsModel.currentSingerName());
@@ -3719,41 +3000,8 @@ void MainWindow::on_tableViewHistory_customContextMenuRequested(const QPoint &po
     }
 }
 
-void MainWindow::on_actionBreak_music_torture_triggered() {
-    bmPlaylistsModel->select();
-    bmAddPlaylist("torture");
-    bmPlaylistsModel->select();
-    ui->comboBoxBmPlaylists->setCurrentText("torture");
-    ui->tableViewBmDb->selectAll();
-    auto mimedata = bmDbModel.mimeData(ui->tableViewBmDb->selectionModel()->selectedIndexes());
-    playlistSongsModel.dropMimeData(mimedata, Qt::CopyAction, 0, 3, QModelIndex());
 
-    connect(&m_timerTest, &QTimer::timeout, [&]() {
-        QApplication::beep();
-        static int runs = 0;
-        qInfo() << "Karaoke torture test timer timeout";
-        ui->tableViewBmPlaylist->selectRow(0);
-        on_tableViewBmPlaylist_doubleClicked(ui->tableViewBmPlaylist->selectionModel()->selectedRows().at(0));
-        qInfo() << "test runs: " << ++runs;
-    });
-    m_timerTest.start(2000);
-}
 
-void MainWindow::on_tableViewBmDb_clicked([[maybe_unused]]const QModelIndex &index) {
-#ifdef Q_OS_WIN
-    ui->tableViewBmPlaylist->setAttribute(Qt::WA_AcceptDrops, false);
-    ui->tableViewBmPlaylist->setAttribute(Qt::WA_AcceptDrops, true);
-#endif
-}
-
-void MainWindow::resetBmLabels() {
-    ui->labelBmPlaying->setText("None");
-    ui->labelBmNext->setText("None");
-    ui->labelBmDuration->setText("00:00");
-    ui->labelBmRemaining->setText("00:00");
-    ui->labelBmPosition->setText("00:00");
-    ui->sliderBmPosition->setValue(0);
-}
 
 void MainWindow::mouseMoveEvent(QMouseEvent *event) {
     qInfo() << "Mouse move event: " << event->pos();
@@ -3806,9 +3054,6 @@ void MainWindow::on_actionBurn_in_EOS_Jump_triggered() {
 #endif
 }
 
-void MainWindow::on_actionSong_Shop_triggered() {
-    on_pushButtonShop_clicked();
-}
 
 void MainWindow::applyAppTheme(int themeIndex)
 {
@@ -3823,8 +3068,6 @@ void MainWindow::applyTouchFriendly(bool enabled)
         ui->tableViewDB,
         ui->tableViewQueue,
         ui->tableViewHistory,
-        ui->tableViewBmDb,
-        ui->tableViewBmPlaylist,
     };
 
     constexpr int kTouchRowHeight = 44;
