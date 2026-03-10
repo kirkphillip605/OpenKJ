@@ -94,7 +94,7 @@
                 <item>
                  <widget class="QCheckBox" name="checkBoxSilenceDetection">
                   <property name="toolTip">
-                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If enabled, the program will monitor for silent periods of greater than 2 seconds after the last draw instruction has been rendered, stopping the audio track immediately. (Avoids long silences before fading break music back in)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If enabled, the program will monitor for silent periods of greater than 2 seconds after the last draw instruction has been rendered, stopping the audio track immediately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="text">
                    <string>Silence detection</string>

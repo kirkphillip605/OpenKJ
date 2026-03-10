@@ -117,7 +117,6 @@ public:
     void setTickerText(const QString &text);
     void stopTicker();
     VideoDisplay* getVideoDisplay();
-    VideoDisplay* getVideoDisplayBm();
     void slideShowMoveNext();
 
 protected:

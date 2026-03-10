@@ -90,12 +90,6 @@ public:
     bool showCdgWindow();
     void setCdgWindowFullscreenMonitor(int monitor);
     int  cdgWindowFullScreenMonitor();
-    bool controlBreakMusic();
-    void setControlBreakMusic(bool control);
-    bool fadeBreakMusic();
-    void setFadeBreakMusic(bool fade);
-    bool pauseBreakMusic();
-    void setPauseBreakMusic(bool pause);
     bool fadeToStop();
     void setFadeToStop(bool fade);
     bool fadedPause();
@@ -143,9 +137,7 @@ public:
     bool requestServerIgnoreCertErrors();
     void setRequestServerIgnoreCertErrors(bool ignore);
     bool audioUseFader();
-    bool audioUseFaderBm();
     void setAudioUseFader(bool fader);
-    void setAudioUseFaderBm(bool fader);
     int audioVolume();
     void setAudioVolume(int volume);
     QString cdgDisplayBackgroundImage();
@@ -156,16 +148,10 @@ public:
     void setBgSlideShowDir(QString dir);
     bool audioDownmix();
     void setAudioDownmix(bool downmix);
-    bool audioDownmixBm();
-    void setAudioDownmixBm(bool downmix);
     bool audioDetectSilence();
-    bool audioDetectSilenceBm();
     void setAudioDetectSilence(bool enabled);
-    void setAudioDetectSilenceBm(bool enabled);
     QString audioOutputDevice();
-    QString audioOutputDeviceBm();
     void setAudioOutputDevice(QString device);
-    void setAudioOutputDeviceBm(QString device);
     int audioBackend();
     void setAudioBackend(int index);
     int cdgOffsetTop();
@@ -174,10 +160,6 @@ public:
     int cdgOffsetRight();
     bool ignoreAposInSearch();
     int videoOffsetMs();
-    bool bmShowFilenames();
-    void bmSetShowFilenames(bool show);
-    bool bmShowMetadata();
-    void bmSetShowMetadata(bool show);
     int mplxMode();
     void setMplxMode(int mode);
     bool karaokeAutoAdvance();
@@ -210,10 +192,7 @@ public:
     int bookCreatorPageSize();
     bool eqKBypass();
     int getEqKLevel(int band);
-    bool eqBBypass();
-    int getEqBLevel(int band);
     int requestServerInterval();
-    bool bmKCrossFade();
     bool requestRemoveOnRotAdd();
     bool requestDialogAutoShow();
     bool checkUpdates();
@@ -264,7 +243,6 @@ public:
     int lastSingerAddPositionType();
     void saveShortcutKeySequence(const QString &name, const QKeySequence &sequence);
     QKeySequence loadShortcutKeySequence(const QString &name);
-    bool cdgPrescalingEnabled();
     bool rotationAltSortOrder();
     bool treatAllSingersAsRegs();
 
@@ -302,8 +280,6 @@ signals:
     void showSongStopPauseWarningChanged(bool enabled);
     void eqKBypassChanged(bool bypass);
     void eqKLevelChanged(int band, int level);
-    void eqBBypassChanged(bool bypass);
-    void eqBLevelChanged(int band, int level);
     void requestServerIntervalChanged(int interval);
     void requestServerEnabledChanged(bool enabled);
     void rotationDisplayPositionChanged(bool show);
@@ -326,7 +302,6 @@ signals:
 public slots:
     void setTreatAllSingersAsRegs(const bool enabled);
     void setRotationAltSortOrder(bool enabled);
-    void setCdgPrescalingEnabled(bool enabled);
     void setSlideShowInterval(int secs);
     void setHardwareAccelEnabled(const bool enabled);
     void setDbDoubleClickAddsSong(const bool enabled);
@@ -336,7 +311,6 @@ public slots:
     void setRemainBtmOffset(int offset);
     void dbSetLazyLoadDurations(bool val);
     void dbSetSkipValidation(bool val);
-    void setBmKCrossfade(bool enabled);
     void setShowCdgWindow(bool show);
     void setCdgWindowFullscreen(bool fullScreen);
     void setCdgOffsetTop(int pixels);
@@ -365,8 +339,6 @@ public slots:
     void setBookCreatorMarginBtm(double margin);
     void setEqKBypass(bool bypass);
     void setEqKLevel(int band, int level);
-    void setEqBBypass(bool bypass);
-    void setEqBLevel(int band, int level);
     void setRequestServerInterval(int interval);
     void setTickerShowRotationInfo(bool show);
     void setRequestRemoveOnRotAdd(bool remove);
