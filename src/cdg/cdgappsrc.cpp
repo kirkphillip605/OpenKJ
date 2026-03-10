@@ -72,13 +72,14 @@ void CdgAppSrc::cb_need_data(GstAppSrc *appsrc, [[maybe_unused]]guint unused_siz
 {
     auto instance = reinterpret_cast<CdgAppSrc *>(user_data);
 
-    QMutexLocker locker(&instance->m_cdgFileReaderLock);
-    if (instance->m_cdgFileReader == nullptr) return;
-
     instance->g_appSrcNeedData = true;
 
     while (instance->g_appSrcNeedData)
     {
+        QMutexLocker locker(&instance->m_cdgFileReaderLock);
+        if (instance->m_cdgFileReader == nullptr)
+            return;
+
         if(instance->m_cdgFileReader->moveToNextFrame())
         {
             GstBuffer *buffer = gst_buffer_new_and_alloc(cdg::CDG_IMAGE_SIZE);
@@ -90,11 +91,15 @@ void CdgAppSrc::cb_need_data(GstAppSrc *appsrc, [[maybe_unused]]guint unused_siz
             GST_BUFFER_PTS(buffer) = instance->m_cdgFileReader->currentFramePositionMS() * GST_MSECOND;
             GST_BUFFER_DURATION(buffer) = instance->m_cdgFileReader->currentFrameDurationMS() * GST_MSECOND;
 
+            // Release lock before pushing to avoid deadlock with cb_enough_data
+            locker.unlock();
+
             auto rc = gst_app_src_push_buffer(appsrc, buffer);
 
             if (rc != GST_FLOW_OK)
             {
                 qWarning() << "push buffer returned non-OK status: " << rc;
+                instance->g_appSrcNeedData = false;
                 break;
             }
         }

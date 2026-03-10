@@ -779,7 +779,10 @@ void MediaBackend::buildVideoSinkBin()
     g_object_ref(m_videoBin);
 
     m_queueMainVideo = gst_element_factory_make("queue", "m_queueMainVideo");
-    gst_bin_add(reinterpret_cast<GstBin *>(m_videoBin), m_queueMainVideo);
+    auto videoConvert = gst_element_factory_make("videoconvert", "videoConvert");
+    auto videoScale   = gst_element_factory_make("videoscale",   "videoScale");
+
+    gst_bin_add_many(reinterpret_cast<GstBin *>(m_videoBin), m_queueMainVideo, videoConvert, videoScale, nullptr);
 
     auto queuePad = gst_element_get_static_pad(m_queueMainVideo, "sink");
     auto ghostVideoPad = gst_ghost_pad_new("sink", queuePad);
@@ -789,7 +792,10 @@ void MediaBackend::buildVideoSinkBin()
 
     m_videoTee = gst_element_factory_make("tee", "videoTee");
     gst_bin_add(reinterpret_cast<GstBin *>(m_videoBin), m_videoTee);
-    gst_element_link(m_queueMainVideo, m_videoTee);
+
+    // Link: queue → videoconvert → videoscale → tee
+    // videoconvert handles format conversion (e.g. RGB8P from CDG source → RGB16/BGRx for appsink)
+    gst_element_link_many(m_queueMainVideo, videoConvert, videoScale, m_videoTee, nullptr);
 }
 
 void MediaBackend::buildAudioSinkBin()
