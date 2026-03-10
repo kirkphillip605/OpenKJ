@@ -258,10 +258,6 @@ void MediaBackend::play()
 
         allowMissingAudio = m_type == VideoPreview;
 
-        // Configure upscaling and load the CDG file BEFORE adding
-        // the element to the pipeline and patching sinks, so that
-        // caps are stable and data is ready when streaming threads start.
-        m_cdgSrc->setUpscalingEnabled(settings.cdgUpscalingEnabled());
         m_cdgSrc->load(m_cdgFilename);
 
         // Now add to pipeline and link — caps are already correct and data is ready

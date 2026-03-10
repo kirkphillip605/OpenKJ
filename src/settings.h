@@ -301,7 +301,6 @@ public:
     void saveShortcutKeySequence(const QString &name, const QKeySequence &sequence);
     QKeySequence loadShortcutKeySequence(const QString &name);
     bool cdgPrescalingEnabled();
-    bool cdgUpscalingEnabled();
     bool rotationAltSortOrder();
     bool treatAllSingersAsRegs();
 
@@ -365,7 +364,6 @@ public slots:
     void setTreatAllSingersAsRegs(const bool enabled);
     void setRotationAltSortOrder(bool enabled);
     void setCdgPrescalingEnabled(bool enabled);
-    void setCdgUpscalingEnabled(bool enabled);
     void setSlideShowInterval(int secs);
     void setHardwareAccelEnabled(const bool enabled);
     void setDbDoubleClickAddsSong(const bool enabled);
