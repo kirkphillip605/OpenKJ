@@ -39,20 +39,45 @@ else()
     message(STATUS "Building with Qt 5 (${Qt5_VERSION})")
 endif()
 
-include_directories(src/)
+include_directories(src/ src/miniz)
 
-# --- TagLib Dependency (Strictly External) ---
-# We use pkg-config to locate the system TagLib. If not found, we fail immediately.
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(TAGLIB IMPORTED_TARGET REQUIRED taglib)
-
-message(STATUS "Using strictly external TagLib found at: ${TAGLIB_LIBRARY_DIRS}")
-include_directories(SYSTEM ${TAGLIB_INCLUDE_DIRS})
-link_directories(${TAGLIB_LIBRARY_DIRS})
+# --- TagLib Vendored (compiled from src/taglib) ---
+# Remove external TagLib dependency and compile from source
+include_directories(
+    src/taglib
+    src/taglib/toolkit
+    src/taglib/ape
+    src/taglib/asf
+    src/taglib/dsdiff
+    src/taglib/dsf
+    src/taglib/flac
+    src/taglib/it
+    src/taglib/mod
+    src/taglib/mp4
+    src/taglib/mpc
+    src/taglib/mpeg
+    src/taglib/mpeg/id3v1
+    src/taglib/mpeg/id3v2
+    src/taglib/mpeg/id3v2/frames
+    src/taglib/ogg
+    src/taglib/ogg/flac
+    src/taglib/ogg/opus
+    src/taglib/ogg/speex
+    src/taglib/ogg/vorbis
+    src/taglib/riff
+    src/taglib/riff/aiff
+    src/taglib/riff/wav
+    src/taglib/s3m
+    src/taglib/trueaudio
+    src/taglib/wavpack
+    src/taglib/xm
+)
+add_definitions(-DTAGLIB_STATIC)
 
 # --- OS Specific Dependencies (GStreamer & Spdlog) ---
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+    find_package(PkgConfig REQUIRED)
     pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0 gstreamer-app-1.0 gstreamer-audio-1.0 gstreamer-pbutils-1.0 gstreamer-controller-1.0 gstreamer-video-1.0)
     include_directories(${GSTREAMER_INCLUDE_DIRS} ${GLIB_LIBRARY_DIRS})
     link_directories(${GSTREAMER_LIBRARY_DIRS} ${GLIB_INCLUDE_DIRS})
@@ -123,7 +148,7 @@ if(QT_VERSION_MAJOR EQUAL 6)
     add_definitions(-DUSE_QLEMENTINE)
 endif()
 
-# --- Project Source Files (Internal TagLib directory entirely purged) ---
+# --- Project Source Files ---
 set(SOURCE_FILES
         src/miniz/miniz.h
         src/miniz/miniz.c
@@ -147,23 +172,17 @@ set(SOURCE_FILES
         src/dlgsettings.cpp
         src/dlgcdg.cpp
         src/okarchive.cpp
-        src/models/tablemodelbreaksongs.cpp
         src/models/tablemodelcustomnamingpatterns.cpp
         src/models/tablemodelhistorysingers.cpp
         src/models/tablemodelhistorysongs.cpp
         src/models/tablemodelkaraokesongs.cpp
         src/models/tablemodelkaraokesourcedirs.cpp
-        src/models/tablemodelplaylistsongs.cpp
         src/models/tablemodelqueuesongs.cpp
         src/models/tablemodelrequests.cpp
         src/models/tablemodelrotation.cpp
-        src/models/tablemodelsongshopsongs.cpp
         src/tagreader.cpp
-        src/bmdbupdatethread.cpp
         src/settings.cpp
-        src/bmdbdialog.cpp
         src/dlgcustompatterns.cpp
-        src/audiorecorder.cpp
         src/okjsongbookapi.cpp
         src/dlgdbupdate.cpp
         src/dlgbookcreator.cpp
@@ -175,13 +194,6 @@ set(SOURCE_FILES
         src/videodisplay.cpp
         src/volslider.cpp
         src/dlgaddsinger.cpp
-        src/songshop.cpp
-        src/dlgsongshop.cpp
-        src/simplecrypt.cpp
-        src/dlgsongshoppurchase.cpp
-        src/dlgsetpassword.cpp
-        src/dlgpassword.cpp
-        src/dlgpurchaseprogress.cpp
         src/karaokefileinfo.cpp
         src/dlgeditsong.cpp
         src/soundfxbutton.cpp
@@ -207,23 +219,17 @@ set(SOURCE_FILES
         src/dlgsettings.h
         src/dlgcdg.h
         src/okarchive.h
-        src/models/tablemodelbreaksongs.h
         src/models/tablemodelcustomnamingpatterns.h
         src/models/tablemodelhistorysingers.h
         src/models/tablemodelhistorysongs.h
         src/models/tablemodelkaraokesongs.h
         src/models/tablemodelkaraokesourcedirs.h
-        src/models/tablemodelplaylistsongs.h
         src/models/tablemodelqueuesongs.h
         src/models/tablemodelrequests.h
         src/models/tablemodelrotation.h
-        src/models/tablemodelsongshopsongs.h
         src/tagreader.h
-        src/bmdbupdatethread.h
         src/settings.h
-        src/bmdbdialog.h
         src/dlgcustompatterns.h
-        src/audiorecorder.h
         src/okjsongbookapi.h
         src/dlgdbupdate.h
         src/dlgbookcreator.h
@@ -236,13 +242,6 @@ set(SOURCE_FILES
         src/volslider.h
         src/okjversion.h
         src/dlgaddsinger.h
-        src/songshop.h
-        src/dlgsongshop.h
-        src/simplecrypt.h
-        src/dlgsongshoppurchase.h
-        src/dlgsetpassword.h
-        src/dlgpassword.h
-        src/dlgpurchaseprogress.h
         src/karaokefileinfo.h
         src/dlgeditsong.h
         src/soundfxbutton.h
@@ -260,17 +259,11 @@ set(SOURCE_FILES
         src/dlgregularsingers.ui
         src/dlgsettings.ui
         src/dlgcdg.ui
-        src/bmdbdialog.ui
         src/dlgcustompatterns.ui
         src/dlgdbupdate.ui
         src/dlgbookcreator.ui
         src/dlgeq.ui
         src/dlgaddsinger.ui
-        src/dlgsongshop.ui
-        src/dlgsongshoppurchase.ui
-        src/dlgsetpassword.ui
-        src/dlgpassword.ui
-        src/dlgpurchaseprogress.ui
         src/dlgeditsong.ui
         src/dlgvideopreview.ui
         src/resources.qrc
@@ -283,10 +276,6 @@ set(SOURCE_FILES
         src/cdg/cdgimageframe.cpp
         src/cdg/cdgimageframe.h
         src/cdg/libCDG.h
-        src/cdg/xbrz.cpp
-        src/cdg/xbrz.h
-        src/cdg/xbrz_config.h
-        src/cdg/xbrz_tools.h
         src/gstreamer/gstreamerhelper.cpp
         src/gstreamer/gstreamerhelper.h
         src/dlgdebugoutput.cpp
@@ -296,10 +285,123 @@ set(SOURCE_FILES
         src/theme.h
         )
 
+# --- Vendored TagLib Source Files ---
+set(TAGLIB_SOURCE_FILES
+        src/taglib/ape/apefile.cpp
+        src/taglib/ape/apefooter.cpp
+        src/taglib/ape/apeitem.cpp
+        src/taglib/ape/apeproperties.cpp
+        src/taglib/ape/apetag.cpp
+        src/taglib/asf/asfattribute.cpp
+        src/taglib/asf/asffile.cpp
+        src/taglib/asf/asfpicture.cpp
+        src/taglib/asf/asfproperties.cpp
+        src/taglib/asf/asftag.cpp
+        src/taglib/audioproperties.cpp
+        src/taglib/dsdiff/dsdiffdiintag.cpp
+        src/taglib/dsdiff/dsdifffile.cpp
+        src/taglib/dsdiff/dsdiffproperties.cpp
+        src/taglib/dsf/dsffile.cpp
+        src/taglib/dsf/dsfproperties.cpp
+        src/taglib/fileref.cpp
+        src/taglib/flac/flacfile.cpp
+        src/taglib/flac/flacmetadatablock.cpp
+        src/taglib/flac/flacpicture.cpp
+        src/taglib/flac/flacproperties.cpp
+        src/taglib/flac/flacunknownmetadatablock.cpp
+        src/taglib/it/itfile.cpp
+        src/taglib/it/itproperties.cpp
+        src/taglib/mod/modfile.cpp
+        src/taglib/mod/modfilebase.cpp
+        src/taglib/mod/modproperties.cpp
+        src/taglib/mod/modtag.cpp
+        src/taglib/mp4/mp4atom.cpp
+        src/taglib/mp4/mp4coverart.cpp
+        src/taglib/mp4/mp4file.cpp
+        src/taglib/mp4/mp4item.cpp
+        src/taglib/mp4/mp4itemfactory.cpp
+        src/taglib/mp4/mp4properties.cpp
+        src/taglib/mp4/mp4tag.cpp
+        src/taglib/mpc/mpcfile.cpp
+        src/taglib/mpc/mpcproperties.cpp
+        src/taglib/mpeg/id3v1/id3v1genres.cpp
+        src/taglib/mpeg/id3v1/id3v1tag.cpp
+        src/taglib/mpeg/id3v2/frames/attachedpictureframe.cpp
+        src/taglib/mpeg/id3v2/frames/chapterframe.cpp
+        src/taglib/mpeg/id3v2/frames/commentsframe.cpp
+        src/taglib/mpeg/id3v2/frames/eventtimingcodesframe.cpp
+        src/taglib/mpeg/id3v2/frames/generalencapsulatedobjectframe.cpp
+        src/taglib/mpeg/id3v2/frames/ownershipframe.cpp
+        src/taglib/mpeg/id3v2/frames/podcastframe.cpp
+        src/taglib/mpeg/id3v2/frames/popularimeterframe.cpp
+        src/taglib/mpeg/id3v2/frames/privateframe.cpp
+        src/taglib/mpeg/id3v2/frames/relativevolumeframe.cpp
+        src/taglib/mpeg/id3v2/frames/synchronizedlyricsframe.cpp
+        src/taglib/mpeg/id3v2/frames/tableofcontentsframe.cpp
+        src/taglib/mpeg/id3v2/frames/textidentificationframe.cpp
+        src/taglib/mpeg/id3v2/frames/uniquefileidentifierframe.cpp
+        src/taglib/mpeg/id3v2/frames/unknownframe.cpp
+        src/taglib/mpeg/id3v2/frames/unsynchronizedlyricsframe.cpp
+        src/taglib/mpeg/id3v2/frames/urllinkframe.cpp
+        src/taglib/mpeg/id3v2/id3v2extendedheader.cpp
+        src/taglib/mpeg/id3v2/id3v2footer.cpp
+        src/taglib/mpeg/id3v2/id3v2frame.cpp
+        src/taglib/mpeg/id3v2/id3v2framefactory.cpp
+        src/taglib/mpeg/id3v2/id3v2header.cpp
+        src/taglib/mpeg/id3v2/id3v2synchdata.cpp
+        src/taglib/mpeg/id3v2/id3v2tag.cpp
+        src/taglib/mpeg/mpegfile.cpp
+        src/taglib/mpeg/mpegheader.cpp
+        src/taglib/mpeg/mpegproperties.cpp
+        src/taglib/mpeg/xingheader.cpp
+        src/taglib/ogg/flac/oggflacfile.cpp
+        src/taglib/ogg/oggfile.cpp
+        src/taglib/ogg/oggpage.cpp
+        src/taglib/ogg/oggpageheader.cpp
+        src/taglib/ogg/opus/opusfile.cpp
+        src/taglib/ogg/opus/opusproperties.cpp
+        src/taglib/ogg/speex/speexfile.cpp
+        src/taglib/ogg/speex/speexproperties.cpp
+        src/taglib/ogg/vorbis/vorbisfile.cpp
+        src/taglib/ogg/vorbis/vorbisproperties.cpp
+        src/taglib/ogg/xiphcomment.cpp
+        src/taglib/riff/aiff/aifffile.cpp
+        src/taglib/riff/aiff/aiffproperties.cpp
+        src/taglib/riff/rifffile.cpp
+        src/taglib/riff/wav/infotag.cpp
+        src/taglib/riff/wav/wavfile.cpp
+        src/taglib/riff/wav/wavproperties.cpp
+        src/taglib/s3m/s3mfile.cpp
+        src/taglib/s3m/s3mproperties.cpp
+        src/taglib/tag.cpp
+        src/taglib/tagunion.cpp
+        src/taglib/tagutils.cpp
+        src/taglib/toolkit/tbytevector.cpp
+        src/taglib/toolkit/tbytevectorlist.cpp
+        src/taglib/toolkit/tbytevectorstream.cpp
+        src/taglib/toolkit/tdebug.cpp
+        src/taglib/toolkit/tdebuglistener.cpp
+        src/taglib/toolkit/tfile.cpp
+        src/taglib/toolkit/tfilestream.cpp
+        src/taglib/toolkit/tiostream.cpp
+        src/taglib/toolkit/tpicturetype.cpp
+        src/taglib/toolkit/tpropertymap.cpp
+        src/taglib/toolkit/tstring.cpp
+        src/taglib/toolkit/tstringlist.cpp
+        src/taglib/toolkit/tvariant.cpp
+        src/taglib/toolkit/tversionnumber.cpp
+        src/taglib/toolkit/tzlib.cpp
+        src/taglib/trueaudio/trueaudiofile.cpp
+        src/taglib/trueaudio/trueaudioproperties.cpp
+        src/taglib/wavpack/wavpackfile.cpp
+        src/taglib/wavpack/wavpackproperties.cpp
+        src/taglib/xm/xmfile.cpp
+        src/taglib/xm/xmproperties.cpp
+        )
+
 # --- Libraries ---
 set(LIBRARIES
         spdlog
-        PkgConfig::TAGLIB
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Core
         Qt${QT_VERSION_MAJOR}::Gui
@@ -321,7 +423,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBS
         list(APPEND LIBRARIES "PkgConfig::SPDLOG")
     endif ()
 
-    add_executable(openkj ${SOURCE_FILES})
+    add_executable(openkj ${SOURCE_FILES} ${TAGLIB_SOURCE_FILES})
     target_link_libraries(openkj ${LIBRARIES} ${GSTREAMER_LIBRARIES})
 
     install(TARGETS openkj DESTINATION bin)
@@ -334,7 +436,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(openkj_ICON ${CMAKE_CURRENT_SOURCE_DIR}/src/Icons/OpenKJ.icns)
     set_source_files_properties(${openkj_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     
-    add_executable(openkj MACOSX_BUNDLE ${openkj_ICON} ${SOURCE_FILES})
+    add_executable(openkj MACOSX_BUNDLE ${openkj_ICON} ${SOURCE_FILES} ${TAGLIB_SOURCE_FILES})
     
     set_target_properties(openkj PROPERTIES
             BUNDLE True
@@ -412,7 +514,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif ()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    add_executable(openkj ${SOURCE_FILES} ${WINDOWS_ICON_RC})
+    add_executable(openkj ${SOURCE_FILES} ${TAGLIB_SOURCE_FILES} ${WINDOWS_ICON_RC})
     
     target_link_libraries(openkj PRIVATE ${LIBRARIES} ${GSTREAMER_LIBRARIES})
     
