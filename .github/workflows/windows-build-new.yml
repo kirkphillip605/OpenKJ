@@ -96,9 +96,9 @@ jobs:
         Invoke-WebRequest -Uri 'https://storage.googleapis.com/okj-installer-deps/SourceCodePro-Medium.ttf' -OutFile 'downloads\SourceCodePro-Medium.ttf'
 
     - name: Install Qt 6
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
-        version: '6.10.2' # Note: adjust to exactly match your preferred Qt 6 version
+        version: '6.10.2'
         arch: 'win64_msvc2022_64'
         modules: 'qtbase qtsvg'
 

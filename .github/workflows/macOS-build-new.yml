@@ -62,11 +62,11 @@ jobs:
         brew install pkg-config taglib gstreamer
 
     - name: Install Qt 6
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
-        version: '6.8.0' # Note: Update to 6.10.2 when it becomes available via aqtinstall
+        version: '6.8.0'
         arch: 'clang_64'
-        modules: 'qtsvg'
+        modules: 'qtbase qtsvg'
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
