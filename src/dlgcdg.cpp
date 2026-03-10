@@ -247,14 +247,8 @@ void DlgCdg::showAlert(bool show)
     else
     {
         ui->widgetAlert->hide();
-        if (!m_kmb->hasActiveVideo()) {
-            ui->videoDisplayBm->show();
-            ui->videoDisplayKar->hide();
-        }
-        else {
-            ui->videoDisplayBm->hide();
-            ui->videoDisplayKar->show();
-        }
+        ui->videoDisplayBm->hide();
+        ui->videoDisplayKar->show();
     }
 }
 
