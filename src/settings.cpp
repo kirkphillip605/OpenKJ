@@ -956,60 +956,6 @@ void Settings::setAudioBackend(int index) {
     emit audioBackendChanged(index);
 }
 
-QString Settings::recordingContainer() {
-    return settings->value("recordingContainer", "ogg").toString();
-}
-
-void Settings::setRecordingContainer(QString container) {
-    settings->setValue("recordingContainer", container);
-    emit recordingSetupChanged();
-}
-
-QString Settings::recordingCodec() {
-    return settings->value("recordingCodec", "undefined").toString();
-}
-
-void Settings::setRecordingCodec(QString codec) {
-    settings->setValue("recordingCodec", codec);
-    emit recordingSetupChanged();
-}
-
-QString Settings::recordingInput() {
-    return settings->value("recordingInput", "undefined").toString();
-}
-
-void Settings::setRecordingInput(QString input) {
-    settings->setValue("recordingInput", input);
-    emit recordingSetupChanged();
-}
-
-QString Settings::recordingOutputDir() {
-    QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-    return settings->value("recordingOutputDir", defaultPath).toString();
-}
-
-void Settings::setRecordingOutputDir(QString path) {
-    settings->setValue("recordingOutputDir", path);
-    emit recordingSetupChanged();
-}
-
-bool Settings::recordingEnabled() {
-    return settings->value("recordingEnabled", false).toBool();
-}
-
-void Settings::setRecordingEnabled(bool enabled) {
-    settings->setValue("recordingEnabled", enabled);
-    emit recordingSetupChanged();
-}
-
-QString Settings::recordingRawExtension() {
-    return settings->value("recordingRawExtension", QString()).toString();
-}
-
-void Settings::setRecordingRawExtension(QString extension) {
-    settings->setValue("recordingRawExtension", extension);
-}
-
 void Settings::setCdgOffsetTop(int pixels) {
     settings->setValue("cdgOffsetTop", pixels);
     emit cdgOffsetsChanged();
@@ -1219,22 +1165,6 @@ void Settings::bmSetShowMetadata(bool show) {
     settings->setValue("showMetadata", show);
 }
 
-int Settings::bmVolume() {
-    return settings->value("volume", 50).toInt();
-}
-
-void Settings::bmSetVolume(int volume) {
-    settings->setValue("volume", volume);
-}
-
-int Settings::bmPlaylistIndex() {
-    return settings->value("playlistIndex", 0).toInt();
-}
-
-void Settings::bmSetPlaylistIndex(int index) {
-    settings->setValue("playlistIndex", index);
-}
-
 int Settings::mplxMode() {
     return settings->value("mplxMode", 0).toInt();
 }
@@ -1318,14 +1248,6 @@ QColor Settings::alertTxtColor() {
 
 QColor Settings::alertBgColor() {
     return settings->value("alertBgColor", QApplication::palette().window().color()).value<QColor>();
-}
-
-bool Settings::bmAutoStart() {
-    return settings->value("bmAutoStart", false).toBool();
-}
-
-void Settings::setBmAutoStart(bool enabled) {
-    settings->setValue("bmAutoStart", enabled);
 }
 
 int Settings::cdgDisplayOffset() {

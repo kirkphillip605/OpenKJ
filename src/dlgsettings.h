@@ -28,7 +28,6 @@
 #include <QPushButton>
 #include "settings.h"
 #include "mediabackend.h"
-#include "okjsongbookapi.h"
 
 namespace Ui {
 class DlgSettings;
@@ -42,7 +41,6 @@ private:
     Ui::DlgSettings *ui;
     QStringList getMonitors();
     MediaBackend *kAudioBackend;
-    MediaBackend *bmAudioBackend;
     QNetworkAccessManager *networkManager;
     bool m_pageSetupDone;
     QStringList audioOutputDevices;
@@ -54,16 +52,13 @@ private:
     };
 
 public:
-    explicit DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBackend, QWidget *parent = 0);
+    explicit DlgSettings(MediaBackend *AudioBackend, QWidget *parent = 0);
     ~DlgSettings();
 
 signals:
     void audioUseFaderChanged(bool);
-    void audioUseFaderChangedBm(bool);
     void audioSilenceDetectChanged(bool);
-    void audioSilenceDetectChangedBm(bool);
     void audioDownmixChanged(bool);
-    void audioDownmixChangedBm(bool);
 
 private slots:
     void on_btnClose_clicked();
@@ -79,15 +74,8 @@ private slots:
     void on_groupBoxRequestServer_toggled(bool arg1);
     void on_pushButtonBrowse_clicked();
     void on_checkBoxFader_toggled(bool checked);
-    void on_checkBoxFaderBm_toggled(bool checked);
     void on_checkBoxSilenceDetection_toggled(bool checked);
-    void on_checkBoxSilenceDetectionBm_toggled(bool checked);
     void on_checkBoxDownmix_toggled(bool checked);
-    void on_checkBoxDownmixBm_toggled(bool checked);
-    void on_comboBoxDevice_currentIndexChanged(const QString &arg1);
-    void on_comboBoxCodec_currentIndexChanged(const QString &arg1);
-    void on_groupBoxRecording_toggled(bool arg1);
-    void on_buttonBrowse_clicked();
     void onNetworkReply(QNetworkReply* reply);
     void onSslErrors(QNetworkReply * reply);
 
@@ -102,7 +90,6 @@ private slots:
     void on_btnAlertFont_clicked();
     void on_btnAlertTxtColor_clicked();
     void on_btnAlertBgColor_clicked();
-    void on_cbxBmAutostart_clicked(bool checked);
     void on_spinBoxInterval_valueChanged(int arg1);
     void tickerShowRotationInfoChanged(bool show);
     void on_cbxTheme_currentIndexChanged(int index);
@@ -128,7 +115,6 @@ private slots:
     void on_checkBoxProgressiveSearch_toggled(bool checked);
     void on_cbxPreviewEnabled_toggled(bool checked);
     void on_comboBoxKAudioDevices_currentIndexChanged(int index);
-    void on_comboBoxBAudioDevices_currentIndexChanged(int index);
     void on_checkBoxEnforceAspectRatio_clicked(bool checked);
     void on_pushButtonApplyTickerMsg_clicked();
     void on_pushButtonResetDurationPos_clicked();

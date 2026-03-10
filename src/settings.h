@@ -186,18 +186,6 @@ public:
     void setAudioOutputDeviceBm(QString device);
     int audioBackend();
     void setAudioBackend(int index);
-    QString recordingContainer();
-    void setRecordingContainer(QString container);
-    QString recordingCodec();
-    void setRecordingCodec(QString codec);
-    QString recordingInput();
-    void setRecordingInput(QString input);
-    QString recordingOutputDir();
-    void setRecordingOutputDir(QString path);
-    bool recordingEnabled();
-    void setRecordingEnabled(bool enabled);
-    QString recordingRawExtension();
-    void setRecordingRawExtension(QString extension);
     int cdgOffsetTop();
     int cdgOffsetBottom();
     int cdgOffsetLeft();
@@ -208,10 +196,6 @@ public:
     void bmSetShowFilenames(bool show);
     bool bmShowMetadata();
     void bmSetShowMetadata(bool show);
-    int bmVolume();
-    void bmSetVolume(int bmVolume);
-    int bmPlaylistIndex();
-    void bmSetPlaylistIndex(int index);
     int mplxMode();
     void setMplxMode(int mode);
     bool karaokeAutoAdvance();
@@ -227,8 +211,6 @@ public:
     bool showSongPauseStopWarning();
     QColor alertTxtColor();
     QColor alertBgColor();
-    bool bmAutoStart();
-    void setBmAutoStart(bool enabled);
     int cdgDisplayOffset();
     QFont bookCreatorTitleFont();
     QFont bookCreatorArtistFont();
@@ -318,7 +300,6 @@ signals:
     void tickerEnableChanged();
     void tickerShowRotationInfoChanged(bool show);
     void audioBackendChanged(int index);
-    void recordingSetupChanged();
     void cdgBgImageChanged();
     void cdgShowCdgWindowChanged(bool show);
     void cdgWindowFullscreenChanged(bool fullscreen);

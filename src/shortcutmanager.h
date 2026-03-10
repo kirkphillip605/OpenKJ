@@ -43,7 +43,6 @@ public:
 
     QShortcut *deleteSingerShortcut() const { return scutDeleteSinger; }
     QShortcut *deleteSongShortcut() const { return scutDeleteSong; }
-    QShortcut *deletePlSongShortcut() const { return scutDeletePlSong; }
 
 private:
     MainWindow *m_mainWindow;
@@ -51,14 +50,6 @@ private:
     QShortcut *scutAddSinger{nullptr};
     QShortcut *scutKSelectNextSinger{nullptr};
     QShortcut *scutKPlayNextUnsung{nullptr};
-    QShortcut *scutBFfwd{nullptr};
-    QShortcut *scutBPause{nullptr};
-    QShortcut *scutBRestartSong{nullptr};
-    QShortcut *scutBRwnd{nullptr};
-    QShortcut *scutBStop{nullptr};
-    QShortcut *scutBVolDn{nullptr};
-    QShortcut *scutBVolMute{nullptr};
-    QShortcut *scutBVolUp{nullptr};
     QShortcut *scutJumpToSearch{nullptr};
     QShortcut *scutKFfwd{nullptr};
     QShortcut *scutKPause{nullptr};
@@ -73,7 +64,6 @@ private:
     QShortcut *scutToggleSingerWindow{nullptr};
     QShortcut *scutDeleteSinger{nullptr};
     QShortcut *scutDeleteSong{nullptr};
-    QShortcut *scutDeletePlSong{nullptr};
 };
 
 #endif // SHORTCUTMANAGER_H

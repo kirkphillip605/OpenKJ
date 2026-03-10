@@ -52,7 +52,6 @@
 #include "dlgdebugoutput.h"
 #include "dlgvideopreview.h"
 #include "src/models/tablemodelhistorysongs.h"
-#include "src/models/tablemodelplaylistsongs.h"
 #include "src/models/tablemodelqueuesongs.h"
 #include "shortcutmanager.h"
 
