@@ -30,6 +30,9 @@ Makefile*
 *build*
 build*
 
+# Do not ignore CI workflow files
+!.github/workflows/*
+
 
 # Qt unit tests
 target_wrapper.*
