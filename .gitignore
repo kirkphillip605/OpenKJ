@@ -55,3 +55,6 @@ CMakeSettings.json
 
 # CLion
 .idea
+
+# MacOS Junk
+**/.DS_Store
