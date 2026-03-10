@@ -138,6 +138,13 @@ int main(int argc, char *argv[])
         altDataDir = parser.value(dataDirectoryOption);
         settings.reload();
     }
+#ifdef Q_OS_DARWIN
+    // Prevent GStreamer from forking during plugin scanning on macOS.
+    // On Apple Silicon, forked processes may encounter W^X (Write XOR Execute)
+    // memory protection violations (EXC_BAD_ACCESS code 2) during JIT
+    // compilation in GStreamer's plugin scanner subprocess.
+    qputenv("GST_REGISTRY_FORK", "no");
+#endif
 #ifdef MAC_OVERRIDE_GST
     // This points GStreamer paths to the framework contained in the app bundle.  Not needed on brew installs.
     QString appDir = QCoreApplication::applicationDirPath();
