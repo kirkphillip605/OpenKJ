@@ -71,6 +71,7 @@ include_directories(
     src/taglib/trueaudio
     src/taglib/wavpack
     src/taglib/xm
+    src/taglib/utf8
 )
 add_definitions(-DTAGLIB_STATIC)
 
