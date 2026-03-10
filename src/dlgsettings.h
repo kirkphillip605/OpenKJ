@@ -28,6 +28,7 @@
 #include <QPushButton>
 #include "settings.h"
 #include "mediabackend.h"
+#include "okjsongbookapi.h"
 
 namespace Ui {
 class DlgSettings;
