@@ -49,7 +49,7 @@ MediaBackend::MediaBackend(QObject *parent, QString objectName, const MediaType 
 
     buildPipeline();
     if (m_gstInitFailed) {
-        qCritical() << m_objName << " - GStreamer pipeline initialization failed. Audio/video playback will be unavailable.";
+        qWarning() << m_objName << " - Audio/video playback will be unavailable.";
         return;
     }
     getAudioOutputDevices();
@@ -854,9 +854,6 @@ void MediaBackend::buildAudioSinkBin()
     m_audioBin = gst_bin_new("audioBin");
     g_object_ref(m_audioBin);
     m_faderVolumeElement = gst_element_factory_make("volume", "FaderVolumeElement");
-    m_fader = new AudioFader(this);
-    m_fader->setObjName(m_objName + "Fader");
-    m_fader->setVolumeElement(m_faderVolumeElement);
     auto aConvInput = gst_element_factory_make("audioconvert", "aConvInput");
     m_audioSink = gst_element_factory_make("autoaudiosink", "autoAudioSink");
     auto rgVolume = gst_element_factory_make("rgvolume", "rgVolume");
@@ -874,6 +871,10 @@ void MediaBackend::buildAudioSinkBin()
         m_gstInitFailed = true;
         return;
     }
+
+    m_fader = new AudioFader(this);
+    m_fader->setObjName(m_objName + "Fader");
+    m_fader->setVolumeElement(m_faderVolumeElement);
 
     g_object_set(m_faderVolumeElement, "volume", 1.0, nullptr);
     m_bus = gst_element_get_bus(m_pipeline);
@@ -1319,12 +1320,12 @@ void MediaBackend::fadeInImmediate()
 {
     qInfo() << m_objName << " - fadeInImmediate called";
     m_currentlyFadedOut = false;
-    m_fader->immediateIn();
+    if (m_fader) m_fader->immediateIn();
 }
 
 void MediaBackend::fadeOutImmediate()
 {
     qInfo() << m_objName << " - fadeOutImmediate called";
     m_currentlyFadedOut = true;
-    m_fader->immediateOut();
+    if (m_fader) m_fader->immediateOut();
 }
