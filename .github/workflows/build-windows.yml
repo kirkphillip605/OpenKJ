@@ -1,0 +1,153 @@
+name: Windows Builds
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  build:
+    name: Windows ${{ matrix.arch_label }} Build
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86
+            arch_label: x86
+            qt_arch: win32_msvc2022
+            gst_arch: x86
+            msvc_arch: x86
+            installer_suffix: 32bit
+          - arch: x64
+            arch_label: x64
+            qt_arch: win64_msvc2022_64
+            gst_arch: x86_64
+            msvc_arch: x64
+            installer_suffix: 64bit
+          - arch: arm64
+            arch_label: ARM64
+            qt_arch: win64_msvc2022_arm64
+            gst_arch: arm64
+            msvc_arch: arm64
+            installer_suffix: ARM64
+
+    env:
+      GST_VERSION: '1.28.1'
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Get version from git tag
+      id: get_version
+      uses: battila7/get-version-action@v2.2.1
+
+    - name: Setup version env vars and generate okjversion.h
+      shell: bash
+      run: |
+        BRANCH=${GITHUB_REF##*/}
+        RTYPE="release"
+        OKJVER=${{ steps.get_version.outputs.version-without-v }}
+
+        FN="OpenKJ-${OKJVER}-${{ matrix.installer_suffix }}-setup.exe"
+        echo "branch=${BRANCH}" >> $GITHUB_ENV
+        echo "rtype=${RTYPE}" >> $GITHUB_ENV
+        echo "okjver=${OKJVER}" >> $GITHUB_ENV
+        echo "installer_fn=${FN}" >> $GITHUB_ENV
+        echo "OpenKJ Version: $OKJVER"
+        echo "Installer Filename: $FN"
+
+        # Generate okjversion.h before CMake runs
+        echo "#ifndef OKJVERSION_H" > src/okjversion.h
+        echo "#define OKJVERSION_H" >> src/okjversion.h
+        echo "" >> src/okjversion.h
+        echo "#define OKJ_VERSION_MAJOR ${{ steps.get_version.outputs.major }}" >> src/okjversion.h
+        echo "#define OKJ_VERSION_MINOR ${{ steps.get_version.outputs.minor }}" >> src/okjversion.h
+        echo "#define OKJ_VERSION_BUILD ${{ steps.get_version.outputs.patch }}" >> src/okjversion.h
+        echo "#define OKJ_VERSION_STRING \"${{ steps.get_version.outputs.major }}.${{ steps.get_version.outputs.minor }}.${{ steps.get_version.outputs.patch }}\"" >> src/okjversion.h
+        echo "#define OKJ_VERSION_BRANCH \"${RTYPE}\"" >> src/okjversion.h
+        echo "" >> src/okjversion.h
+        echo "#endif //OKJVERSION_H" >> src/okjversion.h
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@v6
+
+    - name: Setup Visual Studio Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1.13.0
+      with:
+        arch: ${{ matrix.msvc_arch }}
+
+    - name: Download & Install GStreamer Runtime
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Uri "https://gstreamer.freedesktop.org/data/pkg/windows/${{ env.GST_VERSION }}/msvc/gstreamer-1.0-msvc-${{ matrix.gst_arch }}-${{ env.GST_VERSION }}.msi" -OutFile "gstreamer.msi"
+        Start-Process -FilePath "msiexec.exe" -ArgumentList "/i gstreamer.msi /quiet ADDLOCAL=ALL" -Wait -NoNewWindow
+
+    - name: Download & Install GStreamer Dev
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Uri "https://gstreamer.freedesktop.org/data/pkg/windows/${{ env.GST_VERSION }}/msvc/gstreamer-1.0-devel-msvc-${{ matrix.gst_arch }}-${{ env.GST_VERSION }}.msi" -OutFile "gstreamer-devel.msi"
+        Start-Process -FilePath "msiexec.exe" -ArgumentList "/i gstreamer-devel.msi /quiet ADDLOCAL=ALL" -Wait -NoNewWindow
+
+    - name: Install Qt 6
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.10.2'
+        arch: ${{ matrix.qt_arch }}
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/build
+      shell: cmd
+      run: |
+        cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DQt6_DIR="%Qt6_DIR%"
+
+    - name: Build C++ Source
+      working-directory: ${{github.workspace}}/build
+      shell: cmd
+      run: cmake --build . --parallel
+
+    - name: Stage Output Directory
+      shell: cmd
+      run: |
+        mkdir output
+        copy build\openkj.exe output\
+
+    - name: Run windeployqt
+      shell: cmd
+      run: windeployqt --release --compiler-runtime output\openkj.exe
+
+    - name: Code Sign
+      shell: powershell
+      run: |
+        if ("${{ secrets.WINDOWS_CERT_BASE64 }}" -ne "") {
+          $certBytes = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERT_BASE64 }}")
+          [System.IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", $certBytes)
+          & signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /f "$env:RUNNER_TEMP\cert.pfx" /p "${{ secrets.WINDOWS_CERT_PASSWORD }}" output\openkj.exe
+        } else {
+          # Self-signed fallback
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=OpenKJ Self Signed" -CertStoreLocation Cert:\CurrentUser\My
+          $certPassword = ConvertTo-SecureString -String "openkj" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "cscrt.pfx" -Password $certPassword
+          & signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /f cscrt.pfx /p "openkj" output\openkj.exe
+        }
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OpenKJ-Windows-${{ matrix.arch_label }}
+        path: output/openkj.exe
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: steps.get_version.outputs.is-semver == 'true'
+      with:
+        files: output/openkj.exe
+        prerelease: ${{ env.rtype != 'release' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

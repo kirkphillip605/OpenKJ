@@ -2,10 +2,10 @@
 #include <QDebug>
 #include <limits>
 #include <tag.h>
-#include <taglib/fileref.h>
-#include <taglib/mpeg/mpegfile.h>
-#include <taglib/toolkit/tbytevectorstream.h>
-#include <taglib/mpeg/id3v2/id3v2framefactory.h>
+#include <fileref.h>
+#include <mpegfile.h>
+#include <tbytevectorstream.h>
+#include <id3v2framefactory.h>
 
 TagReader::TagReader(QObject *parent) : QObject(parent)
 {

@@ -35,20 +35,17 @@
 #include <QNetworkReply>
 #include <QAuthenticator>
 #include <QKeySequenceEdit>
-#include "audiorecorder.h"
 #include <QScreen>
 
 
 extern Settings settings;
-extern OKJSongbookAPI *songbookApi;
 
 
-DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBackend, QWidget *parent) :
+DlgSettings::DlgSettings(MediaBackend *AudioBackend, QWidget *parent) :
         QDialog(parent),
         ui(new Ui::DlgSettings) {
     m_pageSetupDone = false;
     kAudioBackend = AudioBackend;
-    bmAudioBackend = BmAudioBackend;
     networkManager = new QNetworkAccessManager(this);
     ui->setupUi(this);
     settings.restoreWindowState(this);
@@ -63,7 +60,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
     ui->groupBoxShowDuration->setChecked(settings.cdgRemainEnabled());
     ui->cbxRotShowNextSong->setChecked(settings.rotationShowNextSong());
     ui->checkBoxCdgPrescaling->setChecked(settings.cdgPrescalingEnabled());
-    ui->checkBoxCdgUpscaling->setChecked(settings.cdgUpscalingEnabled());
     ui->checkBoxCurrentSingerTop->setChecked(settings.rotationAltSortOrder());
     audioOutputDevices = kAudioBackend->getOutputDevices();
     ui->comboBoxKAudioDevices->addItems(audioOutputDevices);
@@ -73,13 +69,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
         ui->comboBoxKAudioDevices->setCurrentIndex(0);
     } else {
         ui->comboBoxKAudioDevices->setCurrentIndex(selDevice);
-    }
-    ui->comboBoxBAudioDevices->addItems(audioOutputDevices);
-    selDevice = audioOutputDevices.indexOf(settings.audioOutputDeviceBm());
-    if (selDevice == -1)
-        ui->comboBoxBAudioDevices->setCurrentIndex(0);
-    else {
-        ui->comboBoxBAudioDevices->setCurrentIndex(selDevice);
     }
     ui->checkBoxProgressiveSearch->setChecked(settings.progressiveSearchEnabled());
     ui->horizontalSliderTickerSpeed->setValue(settings.tickerSpeed());
@@ -137,11 +126,7 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
     ui->checkBoxFader->setChecked(settings.audioUseFader());
     ui->checkBoxDownmix->setChecked(settings.audioDownmix());
     ui->checkBoxSilenceDetection->setChecked(settings.audioDetectSilence());
-    ui->checkBoxFaderBm->setChecked(settings.audioUseFaderBm());
-    ui->checkBoxDownmixBm->setChecked(settings.audioDownmixBm());
-    ui->checkBoxSilenceDetectionBm->setChecked(settings.audioDetectSilenceBm());
     ui->spinBoxInterval->setValue(settings.requestServerInterval());
-    ui->spinBoxSystemId->setMaximum(songbookApi->entitledSystemCount());
     ui->spinBoxSystemId->setValue(settings.systemId());
     ui->spinBoxCdgOffsetTop->setValue(settings.cdgOffsetTop());
     ui->spinBoxCdgOffsetBottom->setValue(settings.cdgOffsetBottom());
@@ -149,22 +134,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
     ui->spinBoxCdgOffsetRight->setValue(settings.cdgOffsetRight());
     ui->spinBoxSlideshowInterval->setValue(settings.slideShowInterval());
 
-    AudioRecorder recorder;
-    QStringList inputs = recorder.getDeviceList();
-    QStringList codecs = recorder.getCodecs();
-    ui->groupBoxRecording->setChecked(settings.recordingEnabled());
-    ui->comboBoxDevice->addItems(inputs);
-    ui->comboBoxCodec->addItems(codecs);
-    QString recordingInput = settings.recordingInput();
-    if (recordingInput == "undefined")
-        ui->comboBoxDevice->setCurrentIndex(0);
-    else
-        ui->comboBoxDevice->setCurrentIndex(ui->comboBoxDevice->findText(settings.recordingInput()));
-    QString recordingCodec = settings.recordingCodec();
-    if (recordingCodec == "undefined")
-        ui->comboBoxCodec->setCurrentIndex(1);
-    else
-        ui->comboBoxCodec->setCurrentIndex(ui->comboBoxCodec->findText(settings.recordingCodec()));
     ui->comboBoxUpdateBranch->addItem("Stable");
     ui->comboBoxUpdateBranch->addItem("Development");
     // Populate the unified Qlementine theme selector
@@ -173,7 +142,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
         ui->comboBoxAppTheme->addItem(name);
     ui->comboBoxAppTheme->setCurrentIndex(settings.appTheme());
     ui->checkBoxTouchFriendly->setChecked(settings.touchFriendlyEnabled());
-    ui->lineEditOutputDir->setText(settings.recordingOutputDir());
     tickerShowRotationInfoChanged(settings.tickerShowRotationInfo());
     ui->groupBoxTicker->setChecked(settings.tickerEnabled());
     ui->lineEditTickerMessage->setText(settings.tickerCustomString());
@@ -189,7 +157,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
     ui->cbxQueueRemovalWarning->setChecked(settings.showQueueRemovalWarning());
     ui->cbxSingerRemovalWarning->setChecked(settings.showSingerRemovalWarning());
     ui->cbxSongInterruptionWarning->setChecked(settings.showSongInterruptionWarning());
-    ui->cbxBmAutostart->setChecked(settings.bmAutoStart());
     ui->cbxIgnoreApos->setChecked(settings.ignoreAposInSearch());
     ui->spinBoxVideoOffset->setValue(settings.videoOffsetMs());
     ui->cbxStopPauseWarning->setChecked(settings.showSongPauseStopWarning());
@@ -239,7 +206,6 @@ DlgSettings::DlgSettings(MediaBackend *AudioBackend, MediaBackend *BmAudioBacken
     connect(ui->cbxStopPauseWarning, &QCheckBox::toggled, &settings, &Settings::setShowSongPauseStopWarning);
     connect(ui->cbxTickerShowRotationInfo, &QCheckBox::clicked, &settings, &Settings::setTickerShowRotationInfo);
     connect(&settings, &Settings::tickerShowRotationInfoChanged, this, &DlgSettings::tickerShowRotationInfoChanged);
-    connect(songbookApi, &OKJSongbookAPI::entitledSystemCountChanged, this, &DlgSettings::entitledSystemCountChanged);
     connect(ui->cbxRotShowNextSong, &QCheckBox::clicked, &settings, &Settings::setRotationShowNextSong);
     setupHotkeysForm();
     m_pageSetupDone = true;
@@ -492,13 +458,6 @@ void DlgSettings::on_checkBoxFader_toggled(bool checked) {
     emit audioUseFaderChanged(checked);
 }
 
-void DlgSettings::on_checkBoxFaderBm_toggled(bool checked) {
-    if (!m_pageSetupDone)
-        return;
-    settings.setAudioUseFaderBm(checked);
-    emit audioUseFaderChangedBm(checked);
-}
-
 void DlgSettings::on_checkBoxSilenceDetection_toggled(bool checked) {
     if (!m_pageSetupDone)
         return;
@@ -506,55 +465,11 @@ void DlgSettings::on_checkBoxSilenceDetection_toggled(bool checked) {
     emit audioSilenceDetectChanged(checked);
 }
 
-void DlgSettings::on_checkBoxSilenceDetectionBm_toggled(bool checked) {
-    if (!m_pageSetupDone)
-        return;
-    settings.setAudioDetectSilenceBm(checked);
-    emit audioSilenceDetectChangedBm(checked);
-}
-
 void DlgSettings::on_checkBoxDownmix_toggled(bool checked) {
     if (!m_pageSetupDone)
         return;
     settings.setAudioDownmix(checked);
     emit audioDownmixChanged(checked);
-}
-
-void DlgSettings::on_checkBoxDownmixBm_toggled(bool checked) {
-    if (!m_pageSetupDone)
-        return;
-    settings.setAudioDownmixBm(checked);
-    emit audioDownmixChangedBm(checked);
-}
-
-void DlgSettings::on_comboBoxDevice_currentIndexChanged(const QString &arg1) {
-    if (!m_pageSetupDone)
-        return;
-    settings.setRecordingInput(arg1);
-}
-
-void DlgSettings::on_comboBoxCodec_currentIndexChanged(const QString &arg1) {
-    if (!m_pageSetupDone)
-        return;
-    settings.setRecordingCodec(arg1);
-    if (arg1 == "audio/mpeg")
-        settings.setRecordingRawExtension("mp3");
-}
-
-void DlgSettings::on_groupBoxRecording_toggled(bool arg1) {
-    if (!m_pageSetupDone)
-        return;
-    settings.setRecordingEnabled(arg1);
-}
-
-void DlgSettings::on_buttonBrowse_clicked() {
-    QString dirName = QFileDialog::getExistingDirectory(this, "Select the output directory",
-                                                        QStandardPaths::writableLocation(
-                                                                QStandardPaths::MusicLocation), QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog);
-    if (dirName != "") {
-        settings.setRecordingOutputDir(dirName);
-        ui->lineEditOutputDir->setText(dirName);
-    }
 }
 
 void DlgSettings::on_pushButtonClearBgImg_clicked() {
@@ -647,10 +562,6 @@ void DlgSettings::on_btnAlertBgColor_clicked() {
         ui->btnAlertBgColor->setStyleSheet(ss);
         settings.setAlertBgColor(clr);
     }
-}
-
-void DlgSettings::on_cbxBmAutostart_clicked(bool checked) {
-    settings.setBmAutoStart(checked);
 }
 
 void DlgSettings::on_spinBoxInterval_valueChanged(int arg1) {
@@ -774,13 +685,6 @@ void DlgSettings::on_checkBoxDisplayCurrentRotationPosition_clicked(bool checked
     settings.setRotationDisplayPosition(checked);
 }
 
-void DlgSettings::entitledSystemCountChanged(int count) {
-    ui->spinBoxSystemId->setMaximum(count);
-    if (settings.systemId() <= count) {
-        ui->spinBoxSystemId->setValue(settings.systemId());
-    }
-}
-
 void DlgSettings::on_groupBoxShowDuration_clicked(bool checked) {
     settings.setCdgRemainEnabled(checked);
 }
@@ -860,17 +764,6 @@ void DlgSettings::on_comboBoxKAudioDevices_currentIndexChanged(int index) {
     kAudioBackend->setAudioOutputDevice(device);
 }
 
-void DlgSettings::on_comboBoxBAudioDevices_currentIndexChanged(int index) {
-    if (!m_pageSetupDone)
-        return;
-    QString device = ui->comboBoxBAudioDevices->itemText(index);
-    if (settings.audioOutputDeviceBm() == device)
-        return;
-    qInfo() << "Changing karaoke audio output device to: " << index << ")" << device;
-    settings.setAudioOutputDeviceBm(device);
-    bmAudioBackend->setAudioOutputDevice(device);
-}
-
 void DlgSettings::on_checkBoxEnforceAspectRatio_clicked(bool checked) {
     settings.setEnforceAspectRatio(checked);
 }
@@ -900,12 +793,6 @@ void DlgSettings::on_checkBoxCdgPrescaling_stateChanged(int arg1) {
         settings.setCdgPrescalingEnabled(false);
     else
         settings.setCdgPrescalingEnabled(true);
-}
-
-void DlgSettings::on_checkBoxCdgUpscaling_stateChanged(int arg1) {
-    if (!m_pageSetupDone)
-        return;
-    settings.setCdgUpscalingEnabled(arg1 != 0);
 }
 
 void DlgSettings::on_checkBoxCurrentSingerTop_toggled(bool checked) {

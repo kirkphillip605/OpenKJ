@@ -25,12 +25,8 @@
 // (QDesktopWidget removed — no longer used; use QGuiApplication::screens() instead)
 #include <QStandardPaths>
 #include <QDebug>
-#include <QCryptographicHash>
-#include <QDataStream>
-#include "simplecrypt.h"
 #include <QStandardPaths>
 #include <QDir>
-#include <QDataStream>
 #include <QFontDatabase>
 #include <QUuid>
 #include <fstream>
@@ -109,18 +105,6 @@ int Settings::remainBtmOffset() {
     return settings->value("remainBtmOffset", 5).toInt();
 }
 
-qint64 Settings::hash(const QString &str) {
-    QByteArray hash = QCryptographicHash::hash(
-            QByteArray::fromRawData((const char *) str.utf16(), str.length() * 2),
-            QCryptographicHash::Md5
-    );
-    Q_ASSERT(hash.size() == 16);
-    QDataStream stream(hash);
-    qint64 a, b;
-    stream >> a >> b;
-    return a ^ b;
-}
-
 bool Settings::progressiveSearchEnabled() {
     return settings->value("progressiveSearchEnabled", true).toBool();
 }
@@ -169,65 +153,12 @@ void Settings::dbSetDirectoryWatchEnabled(bool val) {
     settings->setValue("directoryWatchEnabled", val);
 }
 
-void Settings::setPassword(QString password) {
-    qint64 passHash = this->hash(password);
-    SimpleCrypt simpleCrypt(passHash);
-    QString pchk = simpleCrypt.encryptToString(QString("testpass"));
-    settings->setValue("pchk", pchk);
-}
-
-void Settings::clearPassword() {
-    settings->remove("pchk");
-    clearCC();
-    clearKNAccount();
-}
-
-bool Settings::chkPassword(QString password) {
-    qint64 passHash = this->hash(password);
-    SimpleCrypt simpleCrypt(passHash);
-    QString pchk = simpleCrypt.decryptToString(settings->value("pchk", QString()).toString());
-    if (pchk == "testpass")
-        return true;
-    else
-        return false;
-}
-
-bool Settings::passIsSet() {
-    if (settings->contains("pchk"))
-        return true;
-    return false;
-}
-
-void Settings::setCC(QString ccn, QString month, QString year, QString ccv, QString passwd) {
-    QString cc = ccn + "," + month + "," + year + "," + ccv;
-    SimpleCrypt simpleCrypt(this->hash(passwd));
-    settings->setValue("cc", simpleCrypt.encryptToString(cc));
-}
-
 void Settings::setSaveCC(bool save) {
     settings->setValue("saveCC", save);
 }
 
 bool Settings::saveCC() {
     return settings->value("saveCC", false).toBool();
-}
-
-void Settings::clearCC() {
-    settings->remove("cc");
-}
-
-void Settings::clearKNAccount() {
-    settings->remove("karaokeDotNetUser");
-    settings->remove("karaokeDotNetPass");
-}
-
-
-void Settings::setSaveKNAccount(bool save) {
-    settings->setValue("saveKNAccount", save);
-}
-
-bool Settings::saveKNAccount() {
-    return settings->value("saveKNAccount", false).toBool();
 }
 
 bool Settings::testingEnabled() {
@@ -244,74 +175,6 @@ bool Settings::hardwareAccelEnabled() {
 
 bool Settings::dbDoubleClickAddsSong() {
     return settings->value("dbDoubleClickAddsSong", false).toBool();
-}
-
-QString Settings::getCCN(const QString &password) {
-    SimpleCrypt simpleCrypt(this->hash(password));
-    QString encrypted = settings->value("cc", QString()).toString();
-    if (encrypted == QString())
-        return QString();
-    QString cc = simpleCrypt.decryptToString(encrypted);
-    QStringList parts = cc.split(",");
-    return parts.at(0);
-}
-
-QString Settings::getCCM(const QString &password) {
-    SimpleCrypt simpleCrypt(this->hash(password));
-    QString encrypted = settings->value("cc", QString()).toString();
-    if (encrypted == QString())
-        return QString();
-    QString cc = simpleCrypt.decryptToString(encrypted);
-    QStringList parts = cc.split(",");
-    return parts.at(1);
-}
-
-QString Settings::getCCY(const QString &password) {
-    SimpleCrypt simpleCrypt(this->hash(password));
-    QString encrypted = settings->value("cc", QString()).toString();
-    if (encrypted == QString())
-        return QString();
-    QString cc = simpleCrypt.decryptToString(encrypted);
-    QStringList parts = cc.split(",");
-    return parts.at(2);
-}
-
-QString Settings::getCCV(const QString &password) {
-    SimpleCrypt simpleCrypt(this->hash(password));
-    QString encrypted = settings->value("cc", QString()).toString();
-    if (encrypted == QString())
-        return QString();
-    QString cc = simpleCrypt.decryptToString(encrypted);
-    QStringList parts = cc.split(",");
-    return parts.at(3);
-}
-
-void Settings::setKaroakeDotNetUser(const QString &username, const QString &password) {
-    SimpleCrypt simpleCrypt(this->hash(password));
-    settings->setValue("karaokeDotNetUser", simpleCrypt.encryptToString(username));
-}
-
-void Settings::setKaraokeDotNetPass(const QString &KDNPassword, const QString &password) {
-    SimpleCrypt simpleCrypt(this->hash(password));
-    settings->setValue("karaokeDotNetPass", simpleCrypt.encryptToString(KDNPassword));
-}
-
-QString Settings::karoakeDotNetUser(const QString &password) {
-    SimpleCrypt simpleCrypt(this->hash(password));
-    QString encrypted = settings->value("karaokeDotNetUser", QString()).toString();
-    if (encrypted == QString())
-        return QString();
-    QString username = simpleCrypt.decryptToString(encrypted);
-    return username;
-}
-
-QString Settings::karoakeDotNetPass(const QString &password) {
-    SimpleCrypt simpleCrypt(this->hash(password));
-    QString encrypted = settings->value("karaokeDotNetPass", QString()).toString();
-    if (encrypted == QString())
-        return QString();
-    QString KDNpassword = simpleCrypt.decryptToString(encrypted);
-    return KDNpassword;
 }
 
 Settings::Settings(QObject *parent) :
@@ -666,14 +529,6 @@ void Settings::setCdgPrescalingEnabled(bool enabled) {
     settings->setValue("cdgPrescaling", enabled);
 }
 
-bool Settings::cdgUpscalingEnabled() {
-    return settings->value("cdgUpscaling", false).toBool();
-}
-
-void Settings::setCdgUpscalingEnabled(bool enabled) {
-    settings->setValue("cdgUpscaling", enabled);
-}
-
 void Settings::setSlideShowInterval(int secs) {
     if (secs <= 5) {
         settings->setValue("slideShowInterval", 5);
@@ -964,60 +819,6 @@ void Settings::setAudioBackend(int index) {
     emit audioBackendChanged(index);
 }
 
-QString Settings::recordingContainer() {
-    return settings->value("recordingContainer", "ogg").toString();
-}
-
-void Settings::setRecordingContainer(QString container) {
-    settings->setValue("recordingContainer", container);
-    emit recordingSetupChanged();
-}
-
-QString Settings::recordingCodec() {
-    return settings->value("recordingCodec", "undefined").toString();
-}
-
-void Settings::setRecordingCodec(QString codec) {
-    settings->setValue("recordingCodec", codec);
-    emit recordingSetupChanged();
-}
-
-QString Settings::recordingInput() {
-    return settings->value("recordingInput", "undefined").toString();
-}
-
-void Settings::setRecordingInput(QString input) {
-    settings->setValue("recordingInput", input);
-    emit recordingSetupChanged();
-}
-
-QString Settings::recordingOutputDir() {
-    QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-    return settings->value("recordingOutputDir", defaultPath).toString();
-}
-
-void Settings::setRecordingOutputDir(QString path) {
-    settings->setValue("recordingOutputDir", path);
-    emit recordingSetupChanged();
-}
-
-bool Settings::recordingEnabled() {
-    return settings->value("recordingEnabled", false).toBool();
-}
-
-void Settings::setRecordingEnabled(bool enabled) {
-    settings->setValue("recordingEnabled", enabled);
-    emit recordingSetupChanged();
-}
-
-QString Settings::recordingRawExtension() {
-    return settings->value("recordingRawExtension", QString()).toString();
-}
-
-void Settings::setRecordingRawExtension(QString extension) {
-    settings->setValue("recordingRawExtension", extension);
-}
-
 void Settings::setCdgOffsetTop(int pixels) {
     settings->setValue("cdgOffsetTop", pixels);
     emit cdgOffsetsChanged();
@@ -1227,22 +1028,6 @@ void Settings::bmSetShowMetadata(bool show) {
     settings->setValue("showMetadata", show);
 }
 
-int Settings::bmVolume() {
-    return settings->value("volume", 50).toInt();
-}
-
-void Settings::bmSetVolume(int volume) {
-    settings->setValue("volume", volume);
-}
-
-int Settings::bmPlaylistIndex() {
-    return settings->value("playlistIndex", 0).toInt();
-}
-
-void Settings::bmSetPlaylistIndex(int index) {
-    settings->setValue("playlistIndex", index);
-}
-
 int Settings::mplxMode() {
     return settings->value("mplxMode", 0).toInt();
 }
@@ -1326,14 +1111,6 @@ QColor Settings::alertTxtColor() {
 
 QColor Settings::alertBgColor() {
     return settings->value("alertBgColor", QApplication::palette().window().color()).value<QColor>();
-}
-
-bool Settings::bmAutoStart() {
-    return settings->value("bmAutoStart", false).toBool();
-}
-
-void Settings::setBmAutoStart(bool enabled) {
-    settings->setValue("bmAutoStart", enabled);
 }
 
 int Settings::cdgDisplayOffset() {

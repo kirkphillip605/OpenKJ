@@ -15,7 +15,6 @@ private:
     CdgFileReader *m_cdgFileReader { nullptr };
     std::atomic<bool> g_appSrcNeedData { false };
     QRecursiveMutex m_cdgFileReaderLock;
-    bool m_upscalingEnabled { false };
 
     void updateCaps();
 
@@ -31,7 +30,6 @@ public:
     GstElement* getSrcElement();
     void reset();
     void load(const QString filename);
-    void setUpscalingEnabled(bool enabled);
 
     /**
      * Returns the position of the very last frame.

@@ -152,81 +152,6 @@ void ShortcutManager::setup()
                                   Qt::ApplicationShortcut);
     connect(scutAddSinger, &QShortcut::activated, mw, &MainWindow::on_buttonAddSinger_clicked);
 
-    scutBFfwd = new QShortcut(settings.loadShortcutKeySequence("bFfwd"), mw, nullptr, nullptr,
-                              Qt::ApplicationShortcut);
-    connect(scutBFfwd, &QShortcut::activated, [mw]() {
-        auto mediaState = mw->bmMediaBackend.state();
-        if (mediaState == MediaBackend::PlayingState || mediaState == MediaBackend::PausedState) {
-            int curPos  = mw->bmMediaBackend.position();
-            int duration = mw->bmMediaBackend.duration();
-            if (curPos + 5000 < duration)
-                mw->bmMediaBackend.setPosition(curPos + 5000);
-        }
-    });
-
-    scutBPause = new QShortcut(settings.loadShortcutKeySequence("bPause"), mw, nullptr, nullptr,
-                               Qt::ApplicationShortcut);
-    connect(scutBPause, &QShortcut::activated, [mw]() {
-        auto mediaState = mw->bmMediaBackend.state();
-        if (mediaState == MediaBackend::PlayingState) {
-            mw->bmMediaBackend.pause();
-            mw->ui->buttonBmPause->setChecked(true);
-        } else if (mediaState == MediaBackend::PausedState) {
-            mw->bmMediaBackend.play();
-            mw->ui->buttonBmPause->setChecked(false);
-        }
-    });
-
-    scutBRestartSong = new QShortcut(settings.loadShortcutKeySequence("bRestartSong"), mw, nullptr, nullptr,
-                                     Qt::ApplicationShortcut);
-    connect(scutBRestartSong, &QShortcut::activated, [mw]() {
-        auto mediaState = mw->bmMediaBackend.state();
-        if (mediaState == MediaBackend::PlayingState || mediaState == MediaBackend::PausedState) {
-            mw->bmMediaBackend.setPosition(0);
-        }
-    });
-
-    scutBRwnd = new QShortcut(settings.loadShortcutKeySequence("bRwnd"), mw, nullptr, nullptr,
-                              Qt::ApplicationShortcut);
-    connect(scutBRwnd, &QShortcut::activated, [mw]() {
-        auto mediaState = mw->bmMediaBackend.state();
-        if (mediaState == MediaBackend::PlayingState || mediaState == MediaBackend::PausedState) {
-            int curPos = mw->bmMediaBackend.position();
-            if (curPos - 5000 > 0)
-                mw->bmMediaBackend.setPosition(curPos - 5000);
-            else
-                mw->bmMediaBackend.setPosition(0);
-        }
-    });
-
-    scutBStop = new QShortcut(settings.loadShortcutKeySequence("bStop"), mw, nullptr, nullptr,
-                              Qt::ApplicationShortcut);
-    connect(scutBStop, &QShortcut::activated, [mw]() {
-        mw->bmMediaBackend.stop();
-    });
-
-    scutBVolDn = new QShortcut(settings.loadShortcutKeySequence("bVolDn"), mw, nullptr, nullptr,
-                               Qt::ApplicationShortcut);
-    connect(scutBVolDn, &QShortcut::activated, [mw]() {
-        int curVol = mw->bmMediaBackend.getVolume();
-        if (curVol > 0)
-            mw->bmMediaBackend.setVolume(curVol - 1);
-    });
-
-    scutBVolMute = new QShortcut(settings.loadShortcutKeySequence("bVolMute"), mw, nullptr, nullptr,
-                                 Qt::ApplicationShortcut);
-    connect(scutBVolMute, &QShortcut::activated, [mw]() {
-        mw->bmMediaBackend.setMuted(!mw->bmMediaBackend.isMuted());
-    });
-
-    scutBVolUp = new QShortcut(settings.loadShortcutKeySequence("bVolUp"), mw, nullptr, nullptr,
-                               Qt::ApplicationShortcut);
-    connect(scutBVolUp, &QShortcut::activated, [mw]() {
-        int curVol = mw->bmMediaBackend.getVolume();
-        if (curVol < 100)
-            mw->bmMediaBackend.setVolume(curVol + 1);
-    });
-
     scutJumpToSearch = new QShortcut(settings.loadShortcutKeySequence("jumpToSearch"), mw, nullptr, nullptr,
                                      Qt::ApplicationShortcut);
     connect(scutJumpToSearch, &QShortcut::activated, [mw]() {
@@ -399,47 +324,6 @@ void ShortcutManager::setup()
         });
     });
 
-    scutDeletePlSong = new QShortcut(QKeySequence(QKeySequence::Delete), mw->ui->tableViewBmPlaylist, nullptr, nullptr,
-                                     Qt::WidgetShortcut);
-    connect(scutDeletePlSong, &QShortcut::activated, [mw]() {
-        auto rows = mw->ui->tableViewBmPlaylist->selectionModel()->selectedRows(0);
-        std::vector<int> positions;
-        bool curPlayingSelected{false};
-        std::for_each(rows.begin(), rows.end(), [&](auto index) {
-            positions.emplace_back(index.row());
-            if (mw->playlistSongsModel.isCurrentlyPlayingSong(index.data(Qt::UserRole).toInt()))
-                curPlayingSelected = true;
-        });
-        auto state = mw->bmMediaBackend.state();
-        if (curPlayingSelected && (state == MediaBackend::PlayingState || state == MediaBackend::PausedState)) {
-            QMessageBox msgBox;
-            msgBox.setWindowTitle("Unable to remove");
-            msgBox.setText("The playlist song you are trying to remove is currently playing and can not be removed.");
-            msgBox.exec();
-            return;
-        }
-        std::sort(positions.begin(), positions.end());
-        std::reverse(positions.begin(), positions.end());
-        std::for_each(positions.begin(), positions.end(), [mw](auto position) {
-            mw->playlistSongsModel.deleteSong(position);
-        });
-        if (curPlayingSelected) {
-            mw->playlistSongsModel.setCurrentPosition(-1);
-        }
-        mw->playlistSongsModel.savePlaylistChanges();
-        if (state != MediaBackend::PlayingState && state != MediaBackend::PausedState)
-            return;
-        if (mw->ui->checkBoxBmBreak->isChecked())
-            mw->ui->labelBmNext->setText("None - Breaking after current song");
-        else {
-            auto nextSong = mw->playlistSongsModel.getNextPlSong();
-            if (nextSong.has_value())
-                mw->ui->labelBmNext->setText(nextSong->get().artist + " - " + nextSong->get().title);
-            else
-                mw->ui->labelBmNext->setText("None - Breaking after current song");
-        }
-    });
-
     connect(&settings, &Settings::shortcutsChanged, mw, &MainWindow::shortcutsUpdated);
 }
 
@@ -448,14 +332,6 @@ void ShortcutManager::updateShortcuts()
     scutKSelectNextSinger->setKey(settings.loadShortcutKeySequence("kSelectNextSinger"));
     scutKPlayNextUnsung->setKey(settings.loadShortcutKeySequence("kPlayNextUnsung"));
     scutAddSinger->setKey(settings.loadShortcutKeySequence("addSinger"));
-    scutBFfwd->setKey(settings.loadShortcutKeySequence("bFfwd"));
-    scutBPause->setKey(settings.loadShortcutKeySequence("bPause"));
-    scutBRestartSong->setKey(settings.loadShortcutKeySequence("bRestartSong"));
-    scutBRwnd->setKey(settings.loadShortcutKeySequence("bRwnd"));
-    scutBStop->setKey(settings.loadShortcutKeySequence("bStop"));
-    scutBVolDn->setKey(settings.loadShortcutKeySequence("bVolDn"));
-    scutBVolMute->setKey(settings.loadShortcutKeySequence("bVolMute"));
-    scutBVolUp->setKey(settings.loadShortcutKeySequence("bVolUp"));
     scutJumpToSearch->setKey(settings.loadShortcutKeySequence("jumpToSearch"));
     scutKFfwd->setKey(settings.loadShortcutKeySequence("kFfwd"));
     scutKPause->setKey(settings.loadShortcutKeySequence("kPause"));

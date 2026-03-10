@@ -1,0 +1,125 @@
+name: MacOS Builds
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  build:
+    name: MacOS Apple Silicon Build
+    runs-on: macos-14
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Get version from git tag
+      id: get_version
+      uses: battila7/get-version-action@v2.2.1
+
+    - name: Setup version env vars and generate okjversion.h
+      shell: bash
+      run: |
+        BRANCH=${GITHUB_REF##*/}
+        RTYPE="release"
+        OKJVER=${{ steps.get_version.outputs.version-without-v }}
+
+        FN="OpenKJ-${OKJVER}-macOS-ARM64-installer.pkg"
+        echo "installer_fn=${FN}" >> $GITHUB_ENV
+        echo "rtype=${RTYPE}" >> $GITHUB_ENV
+        echo "branch=${BRANCH}" >> $GITHUB_ENV
+        echo "okjver=${OKJVER}" >> $GITHUB_ENV
+        echo "OpenKJ Version: $OKJVER"
+        echo "Installer Filename: $FN"
+
+        # Generate okjversion.h before CMake runs
+        cat > src/okjversion.h << EOF
+        #ifndef OKJVERSION_H
+        #define OKJVERSION_H
+
+        #define OKJ_VERSION_MAJOR ${{ steps.get_version.outputs.major }}
+        #define OKJ_VERSION_MINOR ${{ steps.get_version.outputs.minor }}
+        #define OKJ_VERSION_BUILD ${{ steps.get_version.outputs.patch }}
+        #define OKJ_VERSION_STRING "${{ steps.get_version.outputs.major }}.${{ steps.get_version.outputs.minor }}.${{ steps.get_version.outputs.patch }}"
+        #define OKJ_VERSION_BRANCH "${RTYPE}"
+
+        #endif //OKJVERSION_H
+        EOF
+        # Remove leading whitespace from heredoc
+        sed -i '' 's/^        //' src/okjversion.h
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@v6
+
+    - name: Install GStreamer
+      run: |
+        curl -L -o gstreamer-runtime.pkg "https://gstreamer.freedesktop.org/data/pkg/osx/1.28.1/gstreamer-1.0-1.28.1-universal.pkg"
+        curl -L -o gstreamer-devel.pkg "https://gstreamer.freedesktop.org/data/pkg/osx/1.28.1/gstreamer-1.0-devel-1.28.1-universal.pkg"
+        sudo installer -pkg gstreamer-runtime.pkg -target /
+        sudo installer -pkg gstreamer-devel.pkg -target /
+
+    - name: Install Qt 6
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.10.2'
+        arch: 'clang_64'
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/build
+      run: |
+        cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja
+
+    - name: Build
+      working-directory: ${{github.workspace}}/build
+      run: cmake --build . --parallel 4
+
+    - name: Code Sign (Ad-Hoc or Certificate)
+      working-directory: ${{github.workspace}}/build
+      run: |
+        if [ -n "${{ secrets.MAC_CERT_BASE64 }}" ]; then
+          # Decode certificate and create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+
+          echo "${{ secrets.MAC_CERT_BASE64 }}" | base64 --decode > $CERT_PATH
+
+          security create-keychain -p "temppass" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "temppass" $KEYCHAIN_PATH
+          security import $CERT_PATH -P "${{ secrets.MAC_CERT_PASSWORD }}" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "temppass" $KEYCHAIN_PATH
+
+          codesign --force --deep --sign - openkj.app
+        else
+          # Ad-hoc sign
+          codesign --force --deep --sign - openkj.app
+        fi
+
+    - name: Create Installer (PKG)
+      working-directory: ${{github.workspace}}/build
+      run: |
+        mkdir -p fakeroot/Applications
+        mv "openkj.app" fakeroot/Applications/OpenKJ.app
+        pkgbuild --root "fakeroot" --identifier "org.openkj.openkj" --version "${{ env.okjver }}" ${{ env.installer_fn }}
+
+    - name: Upload Installer to GitHub Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: OpenKJ-MacOS-ARM64-Installer
+        path: build/${{ env.installer_fn }}
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: steps.get_version.outputs.is-semver == 'true'
+      with:
+        files: build/${{ env.installer_fn }}
+        prerelease: ${{ env.rtype != 'release' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
