@@ -504,10 +504,6 @@ QKeySequence Settings::loadShortcutKeySequence(const QString &name) {
     return settings->value("shortcutKeySequence-" + name, QString()).toString();
 }
 
-bool Settings::cdgPrescalingEnabled() {
-    return settings->value("cdgPrescaling", false).toBool();
-}
-
 bool Settings::rotationAltSortOrder() {
     return settings->value("rotationAltSortOrder", true).toBool();
 }
@@ -523,10 +519,6 @@ void Settings::setTreatAllSingersAsRegs(const bool enabled) {
 
 void Settings::setRotationAltSortOrder(bool enabled) {
     settings->setValue("rotationAltSortOrder", enabled);
-}
-
-void Settings::setCdgPrescalingEnabled(bool enabled) {
-    settings->setValue("cdgPrescaling", enabled);
 }
 
 void Settings::setSlideShowInterval(int secs) {
@@ -712,16 +704,8 @@ bool Settings::audioUseFader() {
     return settings->value("audioUseFader", true).toBool();
 }
 
-bool Settings::audioUseFaderBm() {
-    return settings->value("audioUseFaderBm", true).toBool();
-}
-
 void Settings::setAudioUseFader(bool fader) {
     settings->setValue("audioUseFader", fader);
-}
-
-void Settings::setAudioUseFaderBm(bool fader) {
-    settings->setValue("audioUseFaderBm", fader);
 }
 
 int Settings::audioVolume() {
@@ -770,44 +754,20 @@ void Settings::setAudioDownmix(bool downmix) {
     settings->setValue("audioDownmix", downmix);
 }
 
-bool Settings::audioDownmixBm() {
-    return settings->value("audioDownmixBm", false).toBool();
-}
-
-void Settings::setAudioDownmixBm(bool downmix) {
-    settings->setValue("audioDownmixBm", downmix);
-}
-
 bool Settings::audioDetectSilence() {
     return settings->value("audioDetectSilence", false).toBool();
-}
-
-bool Settings::audioDetectSilenceBm() {
-    return settings->value("audioDetectSilenceBm", false).toBool();
 }
 
 void Settings::setAudioDetectSilence(bool enabled) {
     settings->setValue("audioDetectSilence", enabled);
 }
 
-void Settings::setAudioDetectSilenceBm(bool enabled) {
-    settings->setValue("audioDetectSilenceBm", enabled);
-}
-
 QString Settings::audioOutputDevice() {
     return settings->value("audioOutputDevice", 0).toString();
 }
 
-QString Settings::audioOutputDeviceBm() {
-    return settings->value("audioOutputDeviceBm", 0).toString();
-}
-
 void Settings::setAudioOutputDevice(QString device) {
     settings->setValue("audioOutputDevice", device);
-}
-
-void Settings::setAudioOutputDeviceBm(QString device) {
-    settings->setValue("audioOutputDeviceBm", device);
 }
 
 int Settings::audioBackend() {
@@ -942,17 +902,6 @@ void Settings::setEqKLevel(int band, int level) {
     emit eqKLevelChanged(band, level);
 }
 
-void Settings::setEqBBypass(bool bypass) {
-    settings->setValue("eqBBypass", bypass);
-    emit eqBBypassChanged(bypass);
-}
-
-void Settings::setEqBLevel(int band, int level) {
-    // eq bands in settings are indexed 1-10
-    settings->setValue(QString("eqBLevel%1").arg(band + 1), level);
-    emit eqBLevelChanged(band, level);
-}
-
 void Settings::setRequestServerInterval(int interval) {
     settings->setValue("requestServerInterval", interval);
     emit requestServerIntervalChanged(interval);
@@ -1010,22 +959,6 @@ void Settings::setBookCreatorCols(int cols) {
 
 void Settings::setBookCreatorPageSize(int size) {
     settings->setValue("bookCreatorPageSize", size);
-}
-
-bool Settings::bmShowFilenames() {
-    return settings->value("showFilenames", false).toBool();
-}
-
-void Settings::bmSetShowFilenames(bool show) {
-    settings->setValue("showFilenames", show);
-}
-
-bool Settings::bmShowMetadata() {
-    return settings->value("showMetadata", true).toBool();
-}
-
-void Settings::bmSetShowMetadata(bool show) {
-    settings->setValue("showMetadata", show);
 }
 
 int Settings::mplxMode() {
@@ -1190,21 +1123,8 @@ int Settings::getEqKLevel(int band) {
     return settings->value(QString("eqKLevel%1").arg(band + 1), 0).toInt();
 }
 
-bool Settings::eqBBypass() {
-    return settings->value("eqBBypass", true).toBool();
-}
-
-int Settings::getEqBLevel(int band) {
-    // eq bands in settings are indexed 1-10
-    return settings->value(QString("eqBLevel%1").arg(band + 1), 0).toInt();
-}
-
 int Settings::requestServerInterval() {
     return settings->value("requestServerInterval", 30).toInt();
-}
-
-bool Settings::bmKCrossFade() {
-    return settings->value("bmKCrossFade", true).toBool();
 }
 
 bool Settings::requestRemoveOnRotAdd() {
@@ -1326,10 +1246,6 @@ bool Settings::dbLazyLoadDurations() {
 
 void Settings::dbSetLazyLoadDurations(bool val) {
     settings->setValue("dbLazyLoadDurations", val);
-}
-
-void Settings::setBmKCrossfade(bool enabled) {
-    settings->setValue("bmKCrossFade", enabled);
 }
 
 SfxEntry::SfxEntry() {

@@ -34,11 +34,6 @@ VideoDisplay *DlgCdg::getVideoDisplay()
     return ui->videoDisplayKar;
 }
 
-VideoDisplay *DlgCdg::getVideoDisplayBm()
-{
-    return ui->videoDisplayBm;
-}
-
 DlgCdg::DlgCdg(MediaBackend *KaraokeBackend, QWidget *parent, Qt::WindowFlags f) :
     QDialog(parent, f), ui(new Ui::DlgCdg), m_kmb(KaraokeBackend)
 {
@@ -111,7 +106,6 @@ DlgCdg::DlgCdg(MediaBackend *KaraokeBackend, QWidget *parent, Qt::WindowFlags f)
     m_timerAlertCountdown.setInterval(1000);
     m_timer1s.start(1000);
     m_timerSlideShow.start((int)settings.slideShowInterval() * 1000);
-    ui->videoDisplayBm->hide();
 
     // Gracefully handle external display connect/disconnect events.
     connect(qGuiApp, &QGuiApplication::screenRemoved, this, &DlgCdg::handleScreenRemoved);
@@ -241,13 +235,11 @@ void DlgCdg::showAlert(bool show)
     if ((show) && (settings.karaokeAAAlertEnabled()))
     {
         ui->videoDisplayKar->hide();
-        ui->videoDisplayBm->hide();
         ui->widgetAlert->show();
     }
     else
     {
         ui->widgetAlert->hide();
-        ui->videoDisplayBm->hide();
         ui->videoDisplayKar->show();
     }
 }

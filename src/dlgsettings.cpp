@@ -266,38 +266,6 @@ void DlgSettings::setupHotkeysForm() {
             "kSelectNextSinger"
     });
     shortcuts.emplace_back(KeyboardShortcut{
-            "Break Music - Volume up",
-            "bVolUp"
-    });
-    shortcuts.emplace_back(KeyboardShortcut{
-            "Break Music - Volume down",
-            "bVolDn"
-    });
-    shortcuts.emplace_back(KeyboardShortcut{
-            "Break Music - Volume mute/unmute",
-            "bVolMute"
-    });
-    shortcuts.emplace_back(KeyboardShortcut{
-            "Break Music - Pause/unpause",
-            "bPause"
-    });
-    shortcuts.emplace_back(KeyboardShortcut{
-            "Break Music - Stop",
-            "bStop"
-    });
-    shortcuts.emplace_back(KeyboardShortcut{
-            "Break Music - Jump back (5s)",
-            "bRwnd"
-    });
-    shortcuts.emplace_back(KeyboardShortcut{
-            "Break Music - Jump forward (5s)",
-            "bFfwd"
-    });
-    shortcuts.emplace_back(KeyboardShortcut{
-            "Break Music - Restart track",
-            "bRestartSong"
-    });
-    shortcuts.emplace_back(KeyboardShortcut{
             "Toggle singer/video window visibility",
             "toggleSingerWindow"
     });

@@ -52,10 +52,9 @@ MediaBackend::MediaBackend(QObject *parent, QString objectName, const MediaType 
 
     switch (type) {
         case Karaoke:
+        default:
             setAudioOutputDevice(settings.audioOutputDevice());
             break;
-        default:
-            setAudioOutputDevice(settings.audioOutputDeviceBm());
     }
 
     qInfo() << "Done constructing GStreamer backend";
@@ -247,15 +246,6 @@ void MediaBackend::play()
             return;
         }
 
-        if (settings.cdgPrescalingEnabled() && settings.hardwareAccelEnabled())
-        {
-            gst_element_unlink(m_queueMainVideo, m_videoTee);
-            gst_element_link_many(m_queueMainVideo, m_prescalerVideoConvert, m_prescaler, m_prescalerCapsFilter, m_videoTee, nullptr);
-        } else {
-            gst_element_unlink_many(m_queueMainVideo, m_prescalerVideoConvert, m_prescaler, m_prescalerCapsFilter, m_videoTee, nullptr);
-            gst_element_link(m_queueMainVideo, m_videoTee);
-        }
-
         allowMissingAudio = m_type == VideoPreview;
 
         m_cdgSrc->load(m_cdgFilename);
@@ -266,9 +256,6 @@ void MediaBackend::play()
         patchPipelineSinks();
 
         qInfo() << m_objName << " - play - playing cdg:   " << m_cdgFilename;
-    } else {
-        gst_element_unlink_many(m_queueMainVideo, m_prescalerVideoConvert, m_prescaler, m_prescalerCapsFilter, m_videoTee, nullptr);
-        gst_element_link(m_queueMainVideo, m_videoTee);
     }
 
     if (!QFile::exists(m_filename))
@@ -587,7 +574,7 @@ void MediaBackend::gstBusFunc(GstMessage *message)
             qCritical() << m_objName << " - Gst debug: " << debug;
             if (QString(err->message) == "Your GStreamer installation is missing a plug-in.")
             {
-                QString player = (m_objName == "KAR") ? "karaoke" : "break music";
+                QString player = (m_objName == "KAR") ? "karaoke" : "media";
                 qCritical() << m_objName << " - PLAYBACK ERROR - Missing Codec";
                 emit audioError("Unable to play " + player + " file, missing gstreamer plugin");
                 stop(true);
@@ -793,18 +780,6 @@ void MediaBackend::buildVideoSinkBin()
 
     m_queueMainVideo = gst_element_factory_make("queue", "m_queueMainVideo");
     gst_bin_add(reinterpret_cast<GstBin *>(m_videoBin), m_queueMainVideo);
-    m_prescalerVideoConvert = gst_element_factory_make("videoconvert", "m_prescalerVideoConvert");
-    m_prescaler = gst_element_factory_make("videoscale", "m_prescaler");
-    g_object_set(m_prescaler, "method", 0, nullptr);
-    m_prescalerCapsFilter = gst_element_factory_make("capsfilter", "m_prescalerCapsFilter");
-    auto cdgPreScaleCaps = gst_caps_new_simple(
-            "video/x-raw",
-            "format", G_TYPE_STRING, "RGB",
-            "width",  G_TYPE_INT, 1152,
-            "height", G_TYPE_INT, 768,
-            NULL);
-    g_object_set(G_OBJECT(m_prescalerCapsFilter), "caps", cdgPreScaleCaps, nullptr);
-    gst_caps_unref(cdgPreScaleCaps);
 
     auto queuePad = gst_element_get_static_pad(m_queueMainVideo, "sink");
     auto ghostVideoPad = gst_ghost_pad_new("sink", queuePad);
@@ -813,10 +788,8 @@ void MediaBackend::buildVideoSinkBin()
     gst_object_unref(queuePad);
 
     m_videoTee = gst_element_factory_make("tee", "videoTee");
-    gst_bin_add_many(reinterpret_cast<GstBin *>(m_videoBin), m_prescalerVideoConvert, m_prescaler, m_prescalerCapsFilter, m_videoTee, nullptr);
+    gst_bin_add(reinterpret_cast<GstBin *>(m_videoBin), m_videoTee);
     gst_element_link(m_queueMainVideo, m_videoTee);
-
-
 }
 
 void MediaBackend::buildAudioSinkBin()

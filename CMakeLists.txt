@@ -159,7 +159,6 @@ set(SOURCE_FILES
         src/dlgaddsong.cpp
         src/mediabackend.cpp
         src/mzarchive.cpp
-        src/okjutil.h
         src/dlgvideopreview.cpp
         src/mainwindow.cpp
         src/dbupdatethread.cpp
