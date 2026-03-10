@@ -1,0 +1,107 @@
+name: MacOS Builds
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  build:
+    name: MacOS Apple Silicon Build
+    runs-on: macos-14 # This utilizes GitHub's native Apple Silicon (M-Series) runners
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Get version from git tag
+      id: get_version
+      uses: battila7/get-version-action@v2
+
+    - name: Setup OpenKJ version env vars
+      shell: bash
+      run: |
+        BRANCH=${GITHUB_REF##*/}
+        RTYPE="release"
+        OKJVER=${{ steps.get_version.outputs.version-without-v }}
+        
+        FN="OpenKJ-${OKJVER}-macOS-ARM64-installer.pkg"
+        echo "installer_fn=${FN}" >> $GITHUB_ENV
+        echo "rtype=${RTYPE}" >> $GITHUB_ENV
+        echo "branch=${BRANCH}" >> $GITHUB_ENV
+        echo "okjver=${OKJVER}" >> $GITHUB_ENV
+        echo "OpenKJ Version: $OKJVER"
+        echo "Installer Filename: $FN"
+
+    - name: Update files with new version info
+      if: steps.get_version.outputs.is-semver == 'true'
+      shell: bash
+      run: |
+        echo "Updating okjversion.h"
+        echo "#ifndef OKJVERSION_H" > src/okjversion.h
+        echo "#define OKJVERSION_H" >> src/okjversion.h
+        echo "" >> src/okjversion.h
+        echo "#define OKJ_VERSION_MAJOR ${{ steps.get_version.outputs.major }}" >> src/okjversion.h
+        echo "#define OKJ_VERSION_MINOR ${{ steps.get_version.outputs.minor }}" >> src/okjversion.h
+        echo "#define OKJ_VERSION_BUILD ${{ steps.get_version.outputs.patch }}" >> src/okjversion.h
+        echo "#define OKJ_VERSION_STRING \"${{ steps.get_version.outputs.major }}.${{ steps.get_version.outputs.minor }}.${{ steps.get_version.outputs.patch }}\"" >> src/okjversion.h
+        echo "#define OKJ_VERSION_BRANCH \"${{ env.rtype }}\"" >> src/okjversion.h
+        echo "" >> src/okjversion.h
+        echo "#endif //OKJVERSION_H" >> src/okjversion.h
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Install Dependencies (Homebrew)
+      run: |
+        # Homebrew is pre-installed on macos-14 runners
+        brew update
+        # This instantly fetches the latest Apple Silicon versions of GStreamer (1.28.1+) and TagLib
+        brew install pkg-config taglib gstreamer
+
+    - name: Install Qt 6
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.8.0' # Note: Update to 6.10.2 when it becomes available via aqtinstall
+        arch: 'clang_64'
+        modules: 'core gui sql network widgets concurrent svg printsupport openglwidgets'
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build
+
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}/build
+      run: |
+        cmake .. -DCMAKE_BUILD_TYPE=Release -G Ninja
+
+    - name: Build & Ad-Hoc Sign
+      working-directory: ${{github.workspace}}/build
+      # The CMakeLists.txt handles compiling AND the "codesign --sign -" Ad-Hoc signing
+      run: cmake --build . --parallel 4
+
+    - name: Create Unsigned Installer (PKG)
+      working-directory: ${{github.workspace}}/build
+      run: |
+        mkdir -p fakeroot/Applications
+        mv "openkj.app" fakeroot/Applications/OpenKJ.app
+        # Creates the macOS Installer Package without requiring paid Apple Developer secrets
+        pkgbuild --root "fakeroot" --identifier "org.openkj.openkj" --version "${{ env.okjver }}" ${{ env.installer_fn }}
+
+    - name: Upload Installer to GitHub Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: OpenKJ-MacOS-ARM64-Installer
+        path: build/${{ env.installer_fn }}
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: steps.get_version.outputs.is-semver == 'true'
+      with:
+        files: build/${{ env.installer_fn }}
+        prerelease: ${{ env.rtype != 'release' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    # Note: Keep your GCP upload step here if you have the GCP secrets configured in your repository settings!
