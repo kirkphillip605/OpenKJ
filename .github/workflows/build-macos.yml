@@ -35,7 +35,6 @@ jobs:
         echo "OpenKJ Version: $OKJVER"
         echo "Installer Filename: $FN"
 
-        # Generate okjversion.h before CMake runs
         cat > src/okjversion.h << EOF
         #ifndef OKJVERSION_H
         #define OKJVERSION_H
@@ -48,7 +47,7 @@ jobs:
 
         #endif //OKJVERSION_H
         EOF
-        # Remove leading whitespace from heredoc
+
         sed -i '' 's/^        //' src/okjversion.h
 
     - name: Setup Ninja
@@ -79,35 +78,21 @@ jobs:
       working-directory: ${{github.workspace}}/build
       run: cmake --build . --parallel 4
 
-    - name: Code Sign (Ad-Hoc or Certificate)
+    - name: Ad-Hoc Code Sign
       working-directory: ${{github.workspace}}/build
       run: |
-        if [ -n "${{ secrets.MAC_CERT_BASE64 }}" ]; then
-          # Decode certificate and create temporary keychain
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          CERT_PATH=$RUNNER_TEMP/certificate.p12
-
-          echo "${{ secrets.MAC_CERT_BASE64 }}" | base64 --decode > $CERT_PATH
-
-          security create-keychain -p "temppass" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "temppass" $KEYCHAIN_PATH
-          security import $CERT_PATH -P "${{ secrets.MAC_CERT_PASSWORD }}" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "temppass" $KEYCHAIN_PATH
-
-          codesign --force --deep --sign - openkj.app
-        else
-          # Ad-hoc sign
-          codesign --force --deep --sign - openkj.app
-        fi
+        codesign --force --deep --sign - openkj.app
 
     - name: Create Installer (PKG)
       working-directory: ${{github.workspace}}/build
       run: |
         mkdir -p fakeroot/Applications
         mv "openkj.app" fakeroot/Applications/OpenKJ.app
-        pkgbuild --root "fakeroot" --identifier "org.openkj.openkj" --version "${{ env.okjver }}" ${{ env.installer_fn }}
+        pkgbuild \
+          --root "fakeroot" \
+          --identifier "org.openkj.openkj" \
+          --version "${{ env.okjver }}" \
+          ${{ env.installer_fn }}
 
     - name: Upload Installer to GitHub Artifacts
       uses: actions/upload-artifact@v4
