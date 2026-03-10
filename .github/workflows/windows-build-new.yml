@@ -100,7 +100,6 @@ jobs:
       with:
         version: '6.10.2'
         arch: 'win64_msvc2022_64'
-        modules: 'qtbase qtsvg'
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
