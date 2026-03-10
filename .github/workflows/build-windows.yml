@@ -83,14 +83,16 @@ jobs:
     - name: Download & Install GStreamer Runtime
       shell: powershell
       run: |
-        Invoke-WebRequest -Uri "https://gstreamer.freedesktop.org/data/pkg/windows/${{ env.GST_VERSION }}/msvc/gstreamer-1.0-msvc-${{ matrix.gst_arch }}-${{ env.GST_VERSION }}.msi" -OutFile "gstreamer.msi"
-        Start-Process -FilePath "msiexec.exe" -ArgumentList "/i gstreamer.msi /quiet ADDLOCAL=ALL" -Wait -NoNewWindow
+        $url = "https://gstreamer.freedesktop.org/data/pkg/windows/${{ env.GST_VERSION }}/msvc/gstreamer-1.0-msvc-${{ matrix.gst_arch }}-${{ env.GST_VERSION }}.exe"
+        Invoke-WebRequest -Uri $url -OutFile "gstreamer-runtime.exe"
+        Start-Process -FilePath ".\gstreamer-runtime.exe" -ArgumentList "/S" -Wait
 
     - name: Download & Install GStreamer Dev
       shell: powershell
       run: |
-        Invoke-WebRequest -Uri "https://gstreamer.freedesktop.org/data/pkg/windows/${{ env.GST_VERSION }}/msvc/gstreamer-1.0-devel-msvc-${{ matrix.gst_arch }}-${{ env.GST_VERSION }}.msi" -OutFile "gstreamer-devel.msi"
-        Start-Process -FilePath "msiexec.exe" -ArgumentList "/i gstreamer-devel.msi /quiet ADDLOCAL=ALL" -Wait -NoNewWindow
+        $url = "https://gstreamer.freedesktop.org/data/pkg/windows/${{ env.GST_VERSION }}/msvc/gstreamer-1.0-devel-msvc-${{ matrix.gst_arch }}-${{ env.GST_VERSION }}.exe"
+        Invoke-WebRequest -Uri $url -OutFile "gstreamer-devel.exe"
+        Start-Process -FilePath ".\gstreamer-devel.exe" -ArgumentList "/S" -Wait
 
     - name: Install Qt 6
       uses: jurplel/install-qt-action@v4
