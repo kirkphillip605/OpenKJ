@@ -7,6 +7,10 @@
 CdgAppSrc::CdgAppSrc()
 {
     m_cdgAppSrc = reinterpret_cast<GstAppSrc*>(gst_element_factory_make("appsrc", "cdgAppSrc"));
+    if (!m_cdgAppSrc) {
+        qCritical() << "Failed to create GStreamer appsrc element";
+        return;
+    }
     g_object_ref(m_cdgAppSrc);
 
     updateCaps();
@@ -24,7 +28,8 @@ CdgAppSrc::CdgAppSrc()
 CdgAppSrc::~CdgAppSrc()
 {
     reset();
-    g_object_unref(m_cdgAppSrc);
+    if (m_cdgAppSrc)
+        g_object_unref(m_cdgAppSrc);
 }
 
 GstElement *CdgAppSrc::getSrcElement()
@@ -42,6 +47,7 @@ void CdgAppSrc::reset()
 
 void CdgAppSrc::load(const QString filename)
 {
+    if (!m_cdgAppSrc) return;
     QMutexLocker locker(&m_cdgFileReaderLock);
     reset();
     updateCaps();
@@ -51,6 +57,7 @@ void CdgAppSrc::load(const QString filename)
 
 void CdgAppSrc::updateCaps()
 {
+    if (!m_cdgAppSrc) return;
     GstCaps *appSrcCaps = gst_caps_new_simple(
                 "video/x-raw",
                 "format", G_TYPE_STRING, "RGB8P",
