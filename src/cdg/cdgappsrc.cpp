@@ -14,7 +14,7 @@ CdgAppSrc::CdgAppSrc()
     g_object_set(m_cdgAppSrc, "stream-type", GST_APP_STREAM_TYPE_SEEKABLE, "format", GST_FORMAT_TIME, NULL);
     gst_app_src_set_max_bytes(m_cdgAppSrc, static_cast<guint64>(cdg::CDG_IMAGE_SIZE) * 4);
 
-    GstAppSrcCallbacks callbacks;
+    GstAppSrcCallbacks callbacks = {};
     callbacks.need_data	  = &CdgAppSrc::cb_need_data;
     callbacks.enough_data = &CdgAppSrc::cb_enough_data;
     callbacks.seek_data   = &CdgAppSrc::cb_seek_data;

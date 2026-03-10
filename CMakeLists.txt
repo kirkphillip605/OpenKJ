@@ -496,7 +496,7 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         if (DEFINED BUNDLE_GSTREAMER)
             message("Installing GStreamer framework into app bundle")
             install(
-                    DIRECTORY "/Library/Frameworks/GStreamer.framework"
+                    DIRECTORY "/Library/Frameworks/GStreamer.framework/"
                     DESTINATION "openkj.app/Contents/Frameworks/GStreamer.framework"
                     PATTERN "Headers" EXCLUDE
                     PATTERN "*.dSYM" EXCLUDE
@@ -547,8 +547,9 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
         endif ()
         add_custom_command(
                 TARGET openkj
-                COMMAND "xcopy" ARGS "${GST_BASE_PATH_NATIVE}\\*" "/s" "/y"
-                COMMAND "xcopy" ARGS "${GST_BASE_PATH_NATIVE}\\bin\\*.dll" "/y"
+                POST_BUILD
+                COMMAND "xcopy" ARGS "${GST_BASE_PATH_NATIVE}\\*" "${CMAKE_BINARY_DIR}\\" "/s" "/y"
+                COMMAND "xcopy" ARGS "${GST_BASE_PATH_NATIVE}\\bin\\*.dll" "${CMAKE_BINARY_DIR}\\" "/y"
         )
     endif ()
 endif ()

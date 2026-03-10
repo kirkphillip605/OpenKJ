@@ -18,7 +18,7 @@ public:
      */
     bool moveToNextFrame();
 
-    std::array<uchar, cdg::CDG_IMAGE_SIZE> currentFrame() { return m_current_image_data; }
+    const std::array<uchar, cdg::CDG_IMAGE_SIZE>& currentFrame() const { return m_current_image_data; }
     const uchar* currentFrameARGB32Bits() const { return m_current_frame_argb.constBits(); }
     int currentFrameDurationMS();
     int currentFramePositionMS();
