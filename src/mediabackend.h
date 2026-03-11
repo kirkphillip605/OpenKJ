@@ -203,6 +203,7 @@ private:
     gboolean m_changingAudioOutputs{false};
     std::atomic<bool> m_hasVideo{false};
     bool m_videoAccelEnabled{false};
+    bool m_gstInitFailed{false};
     QPointer<AudioFader> m_fader;
     std::atomic<GstState> m_currentState { GST_STATE_NULL };
 

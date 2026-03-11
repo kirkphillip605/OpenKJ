@@ -48,6 +48,10 @@ MediaBackend::MediaBackend(QObject *parent, QString objectName, const MediaType 
     QMetaTypeId<std::shared_ptr<GstMessage>>::qt_metatype_id();
 
     buildPipeline();
+    if (m_gstInitFailed) {
+        qWarning() << m_objName << " - Audio/video playback will be unavailable.";
+        return;
+    }
     getAudioOutputDevices();
 
     switch (type) {
@@ -68,7 +72,8 @@ void MediaBackend::setVideoEnabled(const bool &enabled)
     if(m_videoEnabled != enabled)
     {
         m_videoEnabled = enabled;
-        patchPipelineSinks();
+        if (!m_gstInitFailed)
+            patchPipelineSinks();
     }
 }
 
@@ -115,6 +120,7 @@ void MediaBackend::writePipelineGraphToFile(GstBin *bin, const QString& filePath
 
 void MediaBackend::writePipelinesGraphToFile(const QString& filePath)
 {
+    if (m_gstInitFailed) return;
     writePipelineGraphToFile(reinterpret_cast<GstBin*>(m_videoBin), filePath, "GS graph video");
     writePipelineGraphToFile(reinterpret_cast<GstBin*>(m_audioBin), filePath, "GS graph audio");
     writePipelineGraphToFile(reinterpret_cast<GstBin*>(m_pipeline), filePath, "GS graph Pipeline");
@@ -131,6 +137,7 @@ double MediaBackend::getPitchForSemitone(const int &semitone)
 
 void MediaBackend::setEnforceAspectRatio(const bool &enforce)
 {
+    if (m_gstInitFailed) return;
     for (auto &vs : m_videoSinks)
     {
         if (vs.softwareRenderVideoSink)
@@ -148,17 +155,19 @@ void MediaBackend::setEnforceAspectRatio(const bool &enforce)
 MediaBackend::~MediaBackend()
 {
     qInfo() << "MediaBackend destructor called";
-    resetPipeline();
+    if (!m_gstInitFailed) {
+        resetPipeline();
+    }
     m_timerSlow.stop();
     m_timerFast.stop();
     m_gstBusMsgHandlerTimer.stop();
-    gst_object_unref(m_bus);
-    gst_caps_unref(m_audioCapsMono);
-    gst_caps_unref(m_audioCapsStereo);
-    g_object_unref(m_pipeline);
-    g_object_unref(m_decoder);
-    g_object_unref(m_audioBin);
-    g_object_unref(m_videoBin);
+    if (m_bus) gst_object_unref(m_bus);
+    if (m_audioCapsMono) gst_caps_unref(m_audioCapsMono);
+    if (m_audioCapsStereo) gst_caps_unref(m_audioCapsStereo);
+    if (m_pipeline) g_object_unref(m_pipeline);
+    if (m_decoder) g_object_unref(m_decoder);
+    if (m_audioBin) g_object_unref(m_audioBin);
+    if (m_videoBin) g_object_unref(m_videoBin);
     delete m_cdgSrc;
     for (auto &device : m_audioOutputDevices)
     {
@@ -178,6 +187,7 @@ MediaBackend::~MediaBackend()
 
 qint64 MediaBackend::position()
 {
+    if (m_gstInitFailed) return 0;
     gint64 pos;
     if (gst_element_query_position(m_pipeline, GST_FORMAT_TIME, &pos))
         return pos / GST_MSECOND;
@@ -186,6 +196,7 @@ qint64 MediaBackend::position()
 
 qint64 MediaBackend::duration()
 {
+    if (m_gstInitFailed) return 0;
     gint64 duration;
     if (gst_element_query_duration(m_pipeline, GST_FORMAT_TIME, &duration))
         return duration / GST_MSECOND;
@@ -216,6 +227,10 @@ QStringList MediaBackend::getOutputDevices()
 void MediaBackend::play()
 {
     qInfo() << m_objName << " - play() called";
+    if (m_gstInitFailed) {
+        qCritical() << m_objName << " - Cannot play: GStreamer initialization failed";
+        return;
+    }
     m_videoOffsetMs = m_settings.videoOffsetMs();
 
     if (m_currentlyFadedOut)
@@ -286,6 +301,7 @@ void MediaBackend::play()
 
 void MediaBackend::resetPipeline()
 {
+    if (m_gstInitFailed) return;
     // Stop pipeline and wait for all streaming threads to finish.
     // Without waiting, GStreamer queue threads (e.g. videoqueue2:src)
     // may still be pushing events to downstream elements like appsink,
@@ -369,6 +385,7 @@ void MediaBackend::patchPipelineSinks()
 
 void MediaBackend::pause()
 {
+    if (m_gstInitFailed) return;
     if (m_fade)
         fadeOut();
     gst_element_set_state(m_pipeline, GST_STATE_PAUSED);
@@ -389,16 +406,19 @@ void MediaBackend::setMediaCdg(const QString &cdgFilename, const QString &audioF
 
 void MediaBackend::setMuted(const bool &muted)
 {
+    if (m_gstInitFailed) return;
     gst_stream_volume_set_mute(GST_STREAM_VOLUME(m_volumeElement), muted);
 }
 
 bool MediaBackend::isMuted()
 {
+    if (m_gstInitFailed) return false;
     return gst_stream_volume_get_mute(GST_STREAM_VOLUME(m_volumeElement));
 }
 
 void MediaBackend::setPosition(const qint64 &position)
 {
+    if (m_gstInitFailed) return;
     if (position > 1000 && position > duration() - 1000)
     {
         emit stateChanged(EndOfMediaState);
@@ -413,13 +433,15 @@ void MediaBackend::setVolume(const int &volume)
 {
     qInfo() << m_objName << " - setVolume called";
     m_volume = volume;
-    gst_stream_volume_set_volume(GST_STREAM_VOLUME(m_volumeElement), GST_STREAM_VOLUME_FORMAT_CUBIC, volume * .01);
+    if (!m_gstInitFailed)
+        gst_stream_volume_set_volume(GST_STREAM_VOLUME(m_volumeElement), GST_STREAM_VOLUME_FORMAT_CUBIC, volume * .01);
     emit volumeChanged(volume);
 }
 
 void MediaBackend::stop(const bool &skipFade)
 {
     qInfo() << m_objName << " - AudioBackendGstreamer::stop(" << skipFade << ") called";
+    if (m_gstInitFailed) return;
     if (state() == MediaBackend::StoppedState)
     {
         qInfo() << m_objName << " - AudioBackendGstreamer::stop -- Already stopped, skipping";
@@ -460,6 +482,7 @@ void MediaBackend::rawStop()
 
 void MediaBackend::timerFast_timeout()
 {
+    if (m_gstInitFailed) return;
     if (m_currentState == GST_STATE_NULL)
     {
         if (m_lastPosition == 0)
@@ -535,6 +558,7 @@ void MediaBackend::timerSlow_timeout()
 
 void MediaBackend::setVideoOffset(const int offsetMs) {
     m_videoOffsetMs = offsetMs;
+    if (m_gstInitFailed) return;
 
     gint64 offset = GST_MSECOND * offsetMs;
 
@@ -721,7 +745,15 @@ void MediaBackend::buildPipeline()
     if (!gst_is_initialized())
     {
         qInfo() << m_objName << " - gst not initialized - initializing";
-        gst_init(nullptr,nullptr);
+        GError *error = nullptr;
+        if (!gst_init_check(nullptr, nullptr, &error))
+        {
+            qCritical() << m_objName << " - GStreamer initialization FAILED:"
+                        << (error ? error->message : "unknown error");
+            if (error) g_error_free(error);
+            m_gstInitFailed = true;
+            return;
+        }
     }
 #ifdef Q_OS_WIN
     // Use directsoundsink by default because of buggy wasapi plugin.
@@ -739,6 +771,11 @@ void MediaBackend::buildPipeline()
 #endif
 
     m_pipeline = gst_pipeline_new("pipeline");
+    if (!m_pipeline) {
+        qCritical() << m_objName << " - Failed to create GStreamer pipeline";
+        m_gstInitFailed = true;
+        return;
+    }
     m_pipelineAsBin = reinterpret_cast<GstBin *>(m_pipeline);
 
     /*
@@ -748,6 +785,11 @@ void MediaBackend::buildPipeline()
     */
 
     m_decoder = gst_element_factory_make("uridecodebin", "uridecodebin");
+    if (!m_decoder) {
+        qCritical() << m_objName << " - Failed to create uridecodebin element. Check GStreamer plugin installation.";
+        m_gstInitFailed = true;
+        return;
+    }
     g_signal_connect(m_decoder, "pad-added", G_CALLBACK(padAddedToDecoder_cb), this);
     g_object_ref(m_decoder);
 
@@ -756,6 +798,9 @@ void MediaBackend::buildPipeline()
     buildVideoSinkBin();
     buildAudioSinkBin();
 
+    if (m_gstInitFailed) {
+        return;
+    }
 
     m_gstBusMsgHandlerTimer.start(40);
     connect(&m_gstBusMsgHandlerTimer, &QTimer::timeout, [&] () {
@@ -782,6 +827,12 @@ void MediaBackend::buildVideoSinkBin()
     auto videoConvert = gst_element_factory_make("videoconvert", "videoConvert");
     auto videoScale   = gst_element_factory_make("videoscale",   "videoScale");
 
+    if (!m_queueMainVideo || !videoConvert || !videoScale) {
+        qCritical() << m_objName << " - Failed to create one or more video bin elements. Check GStreamer plugin installation.";
+        m_gstInitFailed = true;
+        return;
+    }
+
     gst_bin_add_many(reinterpret_cast<GstBin *>(m_videoBin), m_queueMainVideo, videoConvert, videoScale, nullptr);
 
     auto queuePad = gst_element_get_static_pad(m_queueMainVideo, "sink");
@@ -803,15 +854,29 @@ void MediaBackend::buildAudioSinkBin()
     m_audioBin = gst_bin_new("audioBin");
     g_object_ref(m_audioBin);
     m_faderVolumeElement = gst_element_factory_make("volume", "FaderVolumeElement");
-    g_object_set(m_faderVolumeElement, "volume", 1.0, nullptr);
-    m_fader = new AudioFader(this);
-    m_fader->setObjName(m_objName + "Fader");
-    m_fader->setVolumeElement(m_faderVolumeElement);
     auto aConvInput = gst_element_factory_make("audioconvert", "aConvInput");
     m_audioSink = gst_element_factory_make("autoaudiosink", "autoAudioSink");
     auto rgVolume = gst_element_factory_make("rgvolume", "rgVolume");
     auto level = gst_element_factory_make("level", "level");
     m_equalizer = gst_element_factory_make("equalizer-10bands", "equalizer");
+
+    if (!m_faderVolumeElement || !aConvInput || !m_audioSink || !rgVolume || !level || !m_equalizer) {
+        qCritical() << m_objName << " - Failed to create one or more audio bin elements. Check GStreamer plugin installation."
+                    << "volume:" << (m_faderVolumeElement != nullptr)
+                    << "audioconvert:" << (aConvInput != nullptr)
+                    << "autoaudiosink:" << (m_audioSink != nullptr)
+                    << "rgvolume:" << (rgVolume != nullptr)
+                    << "level:" << (level != nullptr)
+                    << "equalizer:" << (m_equalizer != nullptr);
+        m_gstInitFailed = true;
+        return;
+    }
+
+    m_fader = new AudioFader(this);
+    m_fader->setObjName(m_objName + "Fader");
+    m_fader->setVolumeElement(m_faderVolumeElement);
+
+    g_object_set(m_faderVolumeElement, "volume", 1.0, nullptr);
     m_bus = gst_element_get_bus(m_pipeline);
     m_audioCapsStereo = gst_caps_new_simple("audio/x-raw", "channels", G_TYPE_INT, 2, nullptr);
     m_audioCapsMono = gst_caps_new_simple("audio/x-raw", "channels", G_TYPE_INT, 1, nullptr);
@@ -819,14 +884,22 @@ void MediaBackend::buildAudioSinkBin()
     auto aConvPostPanorama = gst_element_factory_make("audioconvert", "aConvPostPanorama");
     m_aConvEnd = gst_element_factory_make("audioconvert", "aConvEnd");
     m_fltrPostPanorama = gst_element_factory_make("capsfilter", "fltrPostPanorama");
-    g_object_set(m_fltrPostPanorama, "caps", m_audioCapsStereo, nullptr);
     m_volumeElement = gst_element_factory_make("volume", "volumeElement");
     auto queueMainAudio = gst_element_factory_make("queue", "queueMainAudio");
     auto queueEndAudio = gst_element_factory_make("queue", "queueEndAudio");
     auto audioResample = gst_element_factory_make("audioresample", "audioResample");
-    g_object_set(audioResample, "sinc-filter-mode", 1, "quality", 10, nullptr);
     m_scaleTempo = gst_element_factory_make("scaletempo", "scaleTempo");
     m_audioPanorama = gst_element_factory_make("audiopanorama", "audioPanorama");
+
+    if (!aConvPostPanorama || !m_aConvEnd || !m_fltrPostPanorama || !m_volumeElement ||
+        !queueMainAudio || !queueEndAudio || !audioResample || !m_scaleTempo || !m_audioPanorama) {
+        qCritical() << m_objName << " - Failed to create one or more audio processing elements. Check GStreamer plugin installation.";
+        m_gstInitFailed = true;
+        return;
+    }
+
+    g_object_set(m_fltrPostPanorama, "caps", m_audioCapsStereo, nullptr);
+    g_object_set(audioResample, "sinc-filter-mode", 1, "quality", 10, nullptr);
     g_object_set(m_audioPanorama, "method", 1, nullptr);
 
     GstElement *audioBinLastElement;
@@ -940,6 +1013,7 @@ void MediaBackend::padAddedToDecoder_cb(GstElement *element,  GstPad *pad, gpoin
 
 void MediaBackend::stopPipeline()
 {
+    if (m_gstInitFailed) return;
     gst_element_set_state(m_pipeline, GST_STATE_NULL);
     gst_element_get_state(m_pipeline, nullptr, nullptr, GST_CLOCK_TIME_NONE);
     m_currentState = GST_STATE_NULL;
@@ -980,6 +1054,7 @@ void MediaBackend::getAudioOutputDevices()
                     m_audioOutputDevices.size()
                 }
                 );
+    if (m_gstInitFailed) return;
     auto monitor = gst_device_monitor_new ();
     auto moncaps = gst_caps_new_empty_simple ("audio/x-raw");
     auto monId = gst_device_monitor_add_filter (monitor, "Audio/Sink", moncaps);
@@ -1008,6 +1083,7 @@ void MediaBackend::fadeOut(const bool &waitForFade)
 {
     qInfo() << m_objName << " - fadeOut called";
     m_currentlyFadedOut = true;
+    if (m_gstInitFailed) return;
     gdouble curVolume;
     g_object_get(G_OBJECT(m_volumeElement), "volume", &curVolume, nullptr);
     if (state() != PlayingState)
@@ -1023,6 +1099,7 @@ void MediaBackend::fadeIn(const bool &waitForFade)
 {
     qInfo() << m_objName << " - fadeIn called";
     m_currentlyFadedOut = false;
+    if (m_gstInitFailed) return;
     if (state() != PlayingState)
     {
         qInfo() << m_objName << " - fadeIn - State not playing, skipping fade and setting volume";
@@ -1054,12 +1131,14 @@ bool MediaBackend::isSilent()
 void MediaBackend::setDownmix(const bool &enabled)
 {
     m_downmix = enabled;
-    g_object_set(m_fltrPostPanorama, "caps", (enabled) ? m_audioCapsMono : m_audioCapsStereo, nullptr);
+    if (!m_gstInitFailed)
+        g_object_set(m_fltrPostPanorama, "caps", (enabled) ? m_audioCapsMono : m_audioCapsStereo, nullptr);
 }
 
 void MediaBackend::setTempo(const int &percent)
 {
     m_playbackRate = percent / 100.0;
+    if (m_gstInitFailed) return;
     optimize_scaleTempo_for_rate(m_scaleTempo, m_playbackRate);
 
 #if GST_CHECK_VERSION(1,18,0)
@@ -1087,6 +1166,7 @@ void MediaBackend::setAudioOutputDevice(const AudioOutputDevice &device)
 {
     qInfo() << m_objName << " - Changing audio output device to: " << device.name;
     m_outputDevice = device;
+    if (m_gstInitFailed) return;
     auto curpos = position();
     bool playAfter{false};
     if (state() == PlayingState)
@@ -1143,6 +1223,7 @@ void MediaBackend::setAudioOutputDevice(const QString &deviceName)
 
 void MediaBackend::setVideoOutputWidgets(const std::vector<QWidget*>& surfaces)
 {
+    if (m_gstInitFailed) return;
     if (!m_videoSinks.empty())
     {
         throw std::runtime_error(("Video output widget(s) already set."));
@@ -1200,6 +1281,7 @@ const char* MediaBackend::getVideoSinkElementNameForFactory()
 
 void MediaBackend::setMplxMode(const int &mode)
 {
+    if (m_gstInitFailed) return;
     switch (mode) {
     case Multiplex_LeftChannel:
             setDownmix(true);
@@ -1218,16 +1300,18 @@ void MediaBackend::setMplxMode(const int &mode)
 
 void MediaBackend::setEqBypass(const bool &bypass)
 {
-    for (int band=0; band<10; band++)
-    {
-        g_object_set(m_equalizer, QString("band%1").arg(band).toLocal8Bit(), bypass ? 0.0 : (double)m_eqLevels[band], nullptr);
+    if (!m_gstInitFailed) {
+        for (int band=0; band<10; band++)
+        {
+            g_object_set(m_equalizer, QString("band%1").arg(band).toLocal8Bit(), bypass ? 0.0 : (double)m_eqLevels[band], nullptr);
+        }
     }
     this->m_bypass = bypass;
 }
 
 void MediaBackend::setEqLevel(const int &band, const int &level)
 {
-    if (!m_bypass)
+    if (!m_bypass && !m_gstInitFailed)
         g_object_set(m_equalizer, QString("band%1").arg(band).toLocal8Bit(), (double)level, nullptr);
     m_eqLevels[band] = level;
 }
@@ -1236,12 +1320,12 @@ void MediaBackend::fadeInImmediate()
 {
     qInfo() << m_objName << " - fadeInImmediate called";
     m_currentlyFadedOut = false;
-    m_fader->immediateIn();
+    if (m_fader) m_fader->immediateIn();
 }
 
 void MediaBackend::fadeOutImmediate()
 {
     qInfo() << m_objName << " - fadeOutImmediate called";
     m_currentlyFadedOut = true;
-    m_fader->immediateOut();
+    if (m_fader) m_fader->immediateOut();
 }
