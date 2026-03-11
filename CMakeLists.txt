@@ -511,6 +511,13 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
                     COMMAND "osxrelocator" ARGS "openkj.app/Contents/Frameworks/GStreamer.framework/Versions/Current/bin" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../../../../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
                     COMMAND "osxrelocator" ARGS "openkj.app/Contents/MacOS" "/Library/Frameworks/GStreamer.framework/" "@executable_path/../Frameworks/GStreamer.framework/" "-r" USES_TERMINAL
             )
+	    add_custom_command(
+                    TARGET openkj POST_BUILD
+                    COMMAND "xattr" ARGS "-cr" "openkj.app"
+                    COMMAND "codesign" ARGS "--entitlements" "${CMAKE_CURRENT_SOURCE_DIR}/openkj.entitlements" "--force" "--deep" "--sign" "-" "openkj.app"
+                    COMMENT "Ad-Hoc Signing the application with JIT entitlements..."
+                    USES_TERMINAL
+        )
         endif ()
     endif ()
 endif ()

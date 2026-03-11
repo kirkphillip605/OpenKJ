@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2013-2019 Thomas Isaac Lightburn
  *
  *
@@ -144,6 +144,7 @@ int main(int argc, char *argv[])
     // memory protection violations (EXC_BAD_ACCESS code 2) during JIT
     // compilation in GStreamer's plugin scanner subprocess.
     qputenv("GST_REGISTRY_FORK", "no");
+    qputenv("ORC_CODE", "backup");
 #endif
 #ifdef MAC_OVERRIDE_GST
     // This points GStreamer paths to the framework contained in the app bundle.  Not needed on brew installs.
