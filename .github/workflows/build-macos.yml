@@ -10,8 +10,11 @@ permissions:
 
 jobs:
   build:
-    name: MacOS Apple Silicon Build
-    runs-on: macos-14
+    name: MacOS Intel Build
+    runs-on: macos-13
+
+    env:
+      GST_VERSION: '1.28.1'
 
     steps:
     - name: Checkout Code
@@ -30,7 +33,7 @@ jobs:
         RTYPE="release"
         OKJVER=${{ steps.get_version.outputs.version-without-v }}
 
-        FN="OpenKJ-${OKJVER}-macOS-ARM64-installer.pkg"
+        FN="OpenKJ-${OKJVER}-macOS-Intel-installer.pkg"
         echo "installer_fn=${FN}" >> $GITHUB_ENV
         echo "rtype=${RTYPE}" >> $GITHUB_ENV
         echo "branch=${BRANCH}" >> $GITHUB_ENV
@@ -58,8 +61,8 @@ jobs:
 
     - name: Install GStreamer
       run: |
-        curl -L -o gstreamer-runtime.pkg "https://gstreamer.freedesktop.org/data/pkg/osx/1.28.1/gstreamer-1.0-1.28.1-universal.pkg"
-        curl -L -o gstreamer-devel.pkg "https://gstreamer.freedesktop.org/data/pkg/osx/1.28.1/gstreamer-1.0-devel-1.28.1-universal.pkg"
+        curl -L -o gstreamer-runtime.pkg "https://gstreamer.freedesktop.org/data/pkg/macos/${{ env.GST_VERSION }}/gstreamer-1.0-${{ env.GST_VERSION }}-universal.pkg"
+        curl -L -o gstreamer-devel.pkg "https://gstreamer.freedesktop.org/data/pkg/macos/${{ env.GST_VERSION }}/gstreamer-1.0-devel-${{ env.GST_VERSION }}-universal.pkg"
         sudo installer -pkg gstreamer-runtime.pkg -target /
         sudo installer -pkg gstreamer-devel.pkg -target /
 
@@ -81,11 +84,6 @@ jobs:
       working-directory: ${{github.workspace}}/build
       run: cmake --build . --parallel 4
 
-    - name: Ad-Hoc Code Sign
-      working-directory: ${{github.workspace}}/build
-      run: |
-        codesign --force --deep --sign - openkj.app
-
     - name: Create Installer (PKG)
       working-directory: ${{github.workspace}}/build
       run: |
@@ -100,7 +98,7 @@ jobs:
     - name: Upload Installer to GitHub Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: OpenKJ-MacOS-ARM64-Installer
+        name: OpenKJ-MacOS-Intel-Installer
         path: build/${{ env.installer_fn }}
 
     - name: Create GitHub Release
