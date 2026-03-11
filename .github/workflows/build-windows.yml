@@ -5,6 +5,9 @@ on:
     tags:
       - '*.*.*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Windows ${{ matrix.arch_label }} Build
@@ -19,18 +22,24 @@ jobs:
             gst_arch: x86
             msvc_arch: x86
             installer_suffix: 32bit
+            gst_install_dir: 'C:\gstreamer\1.0\x86'
+            cmake_extra_args: ''
           - arch: x64
             arch_label: x64
             qt_arch: win64_msvc2022_64
             gst_arch: x86_64
             msvc_arch: x64
             installer_suffix: 64bit
+            gst_install_dir: 'C:\gstreamer\1.0\x86_64'
+            cmake_extra_args: ''
           - arch: arm64
             arch_label: ARM64
             qt_arch: win64_msvc2022_arm64
             gst_arch: arm64
             msvc_arch: arm64
             installer_suffix: ARM64
+            gst_install_dir: 'C:\Program Files\gstreamer\1.0\msvc_arm64'
+            cmake_extra_args: '-DCMAKE_SYSTEM_PROCESSOR=ARM64'
 
     env:
       GST_VERSION: '1.28.1'
@@ -80,19 +89,16 @@ jobs:
       with:
         arch: ${{ matrix.msvc_arch }}
 
-    - name: Download & Install GStreamer Runtime
+    - name: Download & Install GStreamer
       shell: powershell
       run: |
         $url = "https://gstreamer.freedesktop.org/data/pkg/windows/${{ env.GST_VERSION }}/msvc/gstreamer-1.0-msvc-${{ matrix.gst_arch }}-${{ env.GST_VERSION }}.exe"
-        Invoke-WebRequest -Uri $url -OutFile "gstreamer-runtime.exe"
-        Start-Process -FilePath ".\gstreamer-runtime.exe" -ArgumentList "/S" -Wait
-
-    - name: Download & Install GStreamer Dev
-      shell: powershell
-      run: |
-        $url = "https://gstreamer.freedesktop.org/data/pkg/windows/${{ env.GST_VERSION }}/msvc/gstreamer-1.0-devel-msvc-${{ matrix.gst_arch }}-${{ env.GST_VERSION }}.exe"
-        Invoke-WebRequest -Uri $url -OutFile "gstreamer-devel.exe"
-        Start-Process -FilePath ".\gstreamer-devel.exe" -ArgumentList "/S" -Wait
+        Write-Host "Downloading GStreamer from: $url"
+        Invoke-WebRequest -Uri $url -OutFile "gstreamer.exe"
+        Write-Host "Installing GStreamer to: ${{ matrix.gst_install_dir }}"
+        Start-Process -FilePath ".\gstreamer.exe" -ArgumentList "/S /D=${{ matrix.gst_install_dir }}" -Wait
+        Write-Host "GStreamer installation complete"
+        Get-ChildItem "${{ matrix.gst_install_dir }}" -ErrorAction SilentlyContinue | Select-Object Name
 
     - name: Install Qt 6
       uses: jurplel/install-qt-action@v4
@@ -107,7 +113,7 @@ jobs:
       working-directory: ${{github.workspace}}/build
       shell: cmd
       run: |
-        cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DQt6_DIR="%Qt6_DIR%"
+        cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DQt6_DIR="%Qt6_DIR%" ${{ matrix.cmake_extra_args }}
 
     - name: Build C++ Source
       working-directory: ${{github.workspace}}/build
@@ -124,26 +130,11 @@ jobs:
       shell: cmd
       run: windeployqt --release --compiler-runtime output\openkj.exe
 
-    - name: Code Sign
-      shell: powershell
-      run: |
-        if ("${{ secrets.WINDOWS_CERT_BASE64 }}" -ne "") {
-          $certBytes = [System.Convert]::FromBase64String("${{ secrets.WINDOWS_CERT_BASE64 }}")
-          [System.IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", $certBytes)
-          & signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /f "$env:RUNNER_TEMP\cert.pfx" /p "${{ secrets.WINDOWS_CERT_PASSWORD }}" output\openkj.exe
-        } else {
-          # Self-signed fallback
-          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=OpenKJ Self Signed" -CertStoreLocation Cert:\CurrentUser\My
-          $certPassword = ConvertTo-SecureString -String "openkj" -Force -AsPlainText
-          Export-PfxCertificate -Cert $cert -FilePath "cscrt.pfx" -Password $certPassword
-          & signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /f cscrt.pfx /p "openkj" output\openkj.exe
-        }
-
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
       with:
         name: OpenKJ-Windows-${{ matrix.arch_label }}
-        path: output/openkj.exe
+        path: output/
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
